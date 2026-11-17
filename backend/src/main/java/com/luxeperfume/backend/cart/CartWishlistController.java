@@ -30,7 +30,7 @@ public class CartWishlistController {
     }
 
     @GetMapping("/api/v1/cart")
-    @Transactional(readOnly = true)
+    @Transactional
     public ApiResponse<Map<String,Object>> getCart(Authentication authentication) {
         long userId = userId(authentication);
         long cartId = getOrCreateCart(userId);
@@ -92,7 +92,7 @@ public class CartWishlistController {
     }
 
     @GetMapping("/api/v1/wishlist")
-    @Transactional(readOnly = true)
+    @Transactional
     public ApiResponse<Map<String,Object>> getWishlist(Authentication authentication) {
         long wishlistId = getOrCreateWishlist(userId(authentication));
         return ApiResponse.success("Wishlist retrieved", wishlistView(wishlistId));
