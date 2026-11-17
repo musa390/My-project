@@ -62,7 +62,7 @@ public class CheckoutQuoteService {
             if (coupon != null && coupon.appliesTo(line) && discount.signum() > 0) {
                 if (i == lastEligible) lineDiscount = discount.subtract(allocated);
                 else {
-                    lineDiscount = discount.multiply(base).divide(eligibleSubtotal, 2, RoundingMode.HALF_UP);
+                    lineDiscount = discount.multiply(base).divide(eligibleSubtotal, 2, RoundingMode.DOWN);
                     lineDiscount = lineDiscount.min(base);
                     allocated = allocated.add(lineDiscount);
                 }
