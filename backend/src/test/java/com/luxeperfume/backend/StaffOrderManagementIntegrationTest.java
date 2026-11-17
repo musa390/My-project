@@ -145,6 +145,15 @@ class StaffOrderManagementIntegrationTest {
 
     @Test
     @Transactional
+    void customerOrderReadPermissionDoesNotGrantStaffOrderReadAccess() throws Exception {
+        Session customer = register("staff-order-customer-boundary");
+
+        mockMvc.perform(get("/api/v1/staff/orders").cookie(customer.access()))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Transactional
     void orderWritePermissionDoesNotRequireReadPermission() throws Exception {
         Session manager = register("staff-order-writeonly");
         long roleId = roleId("MANAGER");
@@ -154,6 +163,10 @@ class StaffOrderManagementIntegrationTest {
         jdbc.update("DELETE FROM role_permissions WHERE role_id=? AND permission_id=?",
                 roleId, readPermissionId);
         String orderNumber = placeOrder(manager, 1);
+        // The CUSTOMER role also carries customer-facing orders.read; remove it so
+        // this test isolates the MANAGER role's staff permission boundary.
+        jdbc.update("DELETE FROM user_roles WHERE user_id=? AND role_id=?",
+                manager.userId(), roleId("CUSTOMER"));
 
         mockMvc.perform(get("/api/v1/staff/orders").cookie(manager.access()))
             .andExpect(status().isForbidden());
