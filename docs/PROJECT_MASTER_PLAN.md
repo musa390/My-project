@@ -30,7 +30,7 @@ Owner confirmed verification script, typecheck, lint, production build and brows
 Admin Frontend modules and demo interactions are complete. Owner-provided typecheck, lint and production build passed; GitHub Actions run 44090886836 succeeded; owner confirmed manual browser QA. See docs/PHASE3-ADMIN-FRONTEND-REPORT.md.
 
 ## Phase 4 database design
-A normalized MySQL 8.4 schema, ERD, 29-table V1 migration, V2 demo seed migration, Docker setup instructions and verification SQL are committed. Runtime database application and verification are still required before sign-off. See docs/DATABASE_DESIGN.md and database/README.md.
+A normalized MySQL 8.4 schema, ERD, 30-table V1 migration (37 foreign keys), V2 demo seed migration, Docker setup instructions and verification SQL are committed. Runtime database application and verification are still required before sign-off. See docs/DATABASE_DESIGN.md and database/README.md.
 
 ## Core architecture
 - Separate Customer and Admin Next.js applications.
