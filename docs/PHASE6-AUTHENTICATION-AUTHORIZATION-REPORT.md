@@ -36,13 +36,13 @@ Unsafe cookie-authenticated requests must send the CSRF value in `X-XSRF-TOKEN`.
 ## Automated verification
 
 Latest backend verification at the time of this report:
-- GitHub Actions run: [Backend Foundation CI](https://github.com/musa390/My-project/actions/runs/44127080101)
+- GitHub Actions run: [Backend Foundation CI](https://github.com/musa390/My-project/actions/runs/44127586809)
 - MySQL 8.4 service and Java 21.
 - `mvn clean verify`: **BUILD SUCCESS**.
 - Integration tests: **13 run, 0 failures, 0 errors, 0 skipped**.
 - Coverage includes health/OpenAPI, Flyway V1–V3, registration/password hashing, login, refresh rotation, logout/revocation, forgot-password response privacy, CSRF, anonymous protected routes and customer/staff permission boundaries.
 
-The separate Phase 6 database workflow is being finalized to assert the two V3 tables after preserving the Phase 4 V1/V2 verification. Do not interpret a pending/failed database workflow as a pass.
+The Phase 6 database workflow also passed: [Database Migration CI](https://github.com/musa390/My-project/actions/runs/44127587025). It applied V1 and V2, passed the Phase 4 schema verification, applied V3, and verified both `auth_sessions` and `password_reset_tokens`.
 
 ## External configuration still required
 
