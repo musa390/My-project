@@ -11,7 +11,7 @@ Build a full-stack perfume e-commerce platform while preserving the existing Cus
 | 2 | Customer Frontend finalization | Complete — 100% |
 | 3 | Separate Admin Frontend | Complete — 100% |
 | 4 | MySQL database design and ERD | **Complete — 100%** |
-| 5 | Spring Boot backend foundation | Next |
+| 5 | Spring Boot backend foundation | **In Progress** |
 | 6 | Authentication and authorization | Pending |
 | 7 | Product and catalog backend | Pending |
 | 8 | Cart, wishlist and inventory | Pending |
@@ -31,6 +31,9 @@ Admin Frontend modules and demo interactions are complete. Owner-provided typech
 
 ## Phase 4 completion
 A normalized MySQL 8.4 schema, ERD, 30-table V1 migration, V2 demo seed migration, 37 foreign keys, 38 CHECK constraints, Docker setup, verification SQL and MySQL CI are complete. GitHub Actions run 44094846967 succeeded after applying both migrations to a disposable MySQL 8.4 database and running the verification step. See docs/PHASE4-DATABASE-REPORT.md. Local persistent setup instructions are in database/README.md.
+
+## Phase 5 foundation
+Working branch: phase5/backend-foundation. Java 21, Spring Boot 4.1.2, Maven, MySQL/Flyway configuration, shared API response/error handling, health endpoint, CORS, OpenAPI/Swagger, integration tests and backend CI are being established. See docs/PHASE5-BACKEND-FOUNDATION-PLAN.md. Phase completion requires local MySQL connectivity, successful Maven verification, successful endpoint checks and passing CI.
 
 ## Core architecture
 - Separate Customer and Admin Next.js applications.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-17 — Phase 5 started
+- Created the phase5/backend-foundation working branch.
+- Added Java 21 / Spring Boot 4.1.2 / Maven backend foundation.
+- Configured MySQL, JPA validation mode and Flyway discovery for existing V1/V2 migrations.
+- Added shared API response DTOs, centralized exception handling, health endpoint, configurable CORS and Swagger/OpenAPI.
+- Added PowerShell environment loader, integration tests and MySQL 8.4 backend CI.
+- Updated Phase 5 plan, status and handoff documentation.
+- Local build and database verification remain pending; Phase 5 is not complete.
+- Customer Website and Admin Frontend source trees were not changed.
+
 ## 2026-11-17 — Phase 4 completed (100%)
 - Finalized normalized MySQL 8.4 schema: 30 tables, 37 foreign-key relationships and 38 CHECK constraints.
 - Added ERD, schema documentation, Flyway-compatible V1/V2 migrations and illustrative sample data.
