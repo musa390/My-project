@@ -8,6 +8,7 @@
 - Phase 2 — Complete (100%); Customer Frontend QA owner-confirmed PASS.
 - Phase 3 — Complete (100%); Admin implementation, local checks, CI and owner-confirmed browser QA passed.
 - Phase 4 — **Complete (100%)**; 30-table MySQL schema, ERD, V1/V2 migrations, sample data, constraints and MySQL 8.4 CI verification passed.
+- Phase 5 — **In Progress**; existing Spring Boot scaffold audited; Docker backend service, backend CI and DB-backed smoke tests added on the Phase 5 branch. Local Docker/MySQL/backend verification is pending.
 
 ## Phase 1–3 evidence
 See the respective phase reports and commit history in this repository. Phase 3 final report: ./PHASE3-ADMIN-FRONTEND-REPORT.md.
@@ -23,6 +24,16 @@ See the respective phase reports and commit history in this repository. Phase 3 
 - Local Docker Compose setup and PowerShell commands are documented in database/README.md. CI database is disposable; the owner can create a persistent local database by following those instructions.
 - Customer Website and Admin Frontend source were not changed in Phase 4.
 
+## Phase 5 — Backend Foundation
+- Branch: phase-5-backend-foundation.
+- Java 21, Spring Boot 3.5.7 and Maven project scaffold.
+- MySQL Connector/J, Spring Data JPA/Hibernate, Flyway core/MySQL, Validation, Actuator and Springdoc OpenAPI dependencies.
+- Environment-driven datasource, Hibernate schema validation, Flyway migration settings, health endpoint, CORS and OpenAPI configuration.
+- Layered sample Category API: Entity, Repository, Service, DTO and Controller.
+- Added Dockerfile and Docker Compose backend service.
+- Added backend CI workflow with MySQL 8.4 and integration smoke tests. CI result and local run are not yet verified; do not treat these as passing until evidence is available.
+- Backend run instructions: backend/README.md.
+
 ## Roadmap
 | Phase | Scope | Status |
 |---|---|---|
@@ -31,7 +42,7 @@ See the respective phase reports and commit history in this repository. Phase 3 
 | 2 | Customer Frontend | Complete — 100% |
 | 3 | Admin Frontend | Complete — 100% |
 | 4 | MySQL Database Design | **Complete — 100%** |
-| 5 | Spring Boot backend foundation | Next |
+| 5 | Spring Boot backend foundation | **In Progress** |
 | 6 | Authentication and authorization | Pending |
 | 7 | Product/catalog backend | Pending |
 | 8 | Cart, wishlist and inventory | Pending |
