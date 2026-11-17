@@ -145,7 +145,7 @@ public class AuthService {
                 "SELECT id,user_id,(expires_at > UTC_TIMESTAMP()) AS valid,revoked_at FROM auth_sessions WHERE refresh_token_hash=? FOR UPDATE", oldHash);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         Map<String,Object> row = rows.getFirst();
-        if (row.get("revoked_at") != null || !Boolean.TRUE.equals(row.get("valid")))
+        if (row.get("revoked_at") != null || !isTrue(row.get("valid")))
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         String sessionId = (String) row.get("id");
         long userId = ((Number) row.get("user_id")).longValue();
@@ -204,6 +204,11 @@ public class AuthService {
         jdbc.update("UPDATE users SET password_hash=? WHERE id=?", passwordEncoder.encode(newPassword), userId);
         jdbc.update("UPDATE password_reset_tokens SET used_at=UTC_TIMESTAMP() WHERE id=?", row.get("id"));
         jdbc.update("UPDATE auth_sessions SET revoked_at=UTC_TIMESTAMP() WHERE user_id=? AND revoked_at IS NULL", userId);
+    }
+
+    private static boolean isTrue(Object value) {
+        if (value instanceof Boolean bool) return bool;
+        return value instanceof Number number && number.intValue() != 0;
     }
 
     private IssuedSession createSession(long userId, String userAgent, String ip) {
