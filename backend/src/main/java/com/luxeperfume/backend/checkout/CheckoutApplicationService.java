@@ -96,7 +96,7 @@ public class CheckoutApplicationService {
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT id,code,discount_type,discount_value,minimum_order_amount,maximum_discount_amount,
                        usage_limit,per_user_limit,usage_count,starts_at,ends_at,is_active
-                FROM coupons WHERE code=? FOR SHARE
+                FROM coupons WHERE code=?
                 """, rawCode);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Coupon is invalid or unavailable");
         Map<String, Object> row = rows.getFirst();
