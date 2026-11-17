@@ -1,0 +1,3 @@
+"use client";
+
+export default function AdminError({reset}:{error:Error & {digest?:string};reset:()=>void}){return <main role="alert" className="mx-auto mt-12 max-w-xl rounded-2xl border border-[#6b3b32] bg-[var(--panel)] p-7"><p className="text-xs uppercase tracking-[.2em] text-[#d18a7d]">Something went wrong</p><h1 className="mt-3 text-2xl font-semibold">This admin view could not load</h1><p className="mt-2 text-sm leading-6 text-[var(--muted)]">The page encountered an unexpected issue. Try loading it again.</p><button onClick={()=>reset()} className="mt-5 rounded-lg border border-[#80663e] px-4 py-2.5 text-sm text-[var(--gold)]">Try again</button></main>}
