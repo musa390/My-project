@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Plan
 
-**Status:** Started — planning and branch foundation created; backend implementation pending.
+**Status:** Steps 1–3 implemented; Step 3 GitHub Maven CI PASS. Customer history/detail/cancellation and Staff/Admin order management remain pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 **Dependency:** Phase 8 persistent cart, catalog pricing, inventory and authentication APIs.
@@ -49,13 +49,13 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 ## Implementation sequence
 
 - [x] Inspect existing address, cart, coupon, order, order-item, coupon-redemption and inventory schema plus auth principal conventions.
-- [x] Add DTO validation and server-side checkout quote/pricing/shipping/coupon services (runtime implementation added; CI verification pending).
-- [ ] Implement transactional order creation, stock reservation and cart conversion.
+- [x] Add DTO validation and server-side checkout quote/pricing/shipping/coupon services; Step 2 Maven CI PASS.
+- [x] Implement transactional order creation, stock reservation, coupon redemption, order snapshots and cart conversion; Step 3 Maven CI PASS.
 - [ ] Implement customer history, detail, tracking and cancellation with stock release.
 - [ ] Implement Staff/Admin order list/detail/status transitions and permission checks.
-- [x] Add Step 2 unit/integration tests for checkout address ownership, client-total tampering, coupon types/caps/limits/product restrictions, stock validation and authentication. Order-creation/rollback/status/cancellation tests remain for later steps.
-- [x] Run MySQL 8.4 GitHub Actions `mvn clean verify` for Step 2 — PASS, 35 tests, 0 failures, 0 errors, 0 skipped; Maven BUILD SUCCESS (workflow run 44143372079).
-- [ ] Update API/OpenAPI documentation, Phase 9 report and project status.
+- [x] Add Step 2/3 unit and MySQL integration tests for checkout validation, order snapshots, coupon redemption, stock reservation, stock rejection, duplicate submissions and cart conversion. Customer cancellation and Staff/Admin status tests remain for later steps.
+- [x] Run MySQL 8.4 GitHub Actions `mvn clean verify` for Steps 2–3 — PASS, 38 tests, 0 failures, 0 errors, 0 skipped; Maven BUILD SUCCESS (workflow run 44144982747).
+- [ ] Update API/OpenAPI documentation for the remaining customer and staff order-management endpoints; Step 3 plan/report/project status updated.
 - [ ] Review diff to ensure Customer/Admin frontend source files and V1/V2/V3 are unchanged.
 - [ ] Owner-local clean-database verification remains an explicit environment acceptance step.
 
@@ -117,7 +117,7 @@ The existing V1 schema already supports the planned Phase 9 workflow. No V4 migr
 - Product/category restriction scopes are combined as eligible-product OR eligible-category matches; only eligible cart lines receive allocated discounts.
 - Uses `BigDecimal` for money and a two-decimal rounding policy.
 - Shipping and tax are calculated by server-side policy interfaces. Development defaults are explicitly configured as BDT 0.00 shipping and 0.00% tax; production/business values must be set through `CHECKOUT_SHIPPING_FLAT_RATE` and `CHECKOUT_TAX_PERCENTAGE`.
-- Preview is read-only: it does not reserve inventory, consume coupon usage, create an order or change the cart. Order creation must revalidate all values transactionally in the next implementation step.
+- Preview is read-only: it does not reserve inventory, consume coupon usage, create an order or change the cart. Order creation revalidates all values transactionally in Step 3.
 
 **Java OOP used in runtime code:**
 - Encapsulation: `CheckoutLine`, `MoneyBreakdown`, `Coupon`.
@@ -141,3 +141,39 @@ The existing V1 schema already supports the planned Phase 9 workflow. No V4 migr
 - Maven result: **BUILD SUCCESS**.
 
 This verifies the Step 2 implementation in GitHub CI. Owner-local verification against a separately created clean database remains pending; the previously failed local database must be preserved.
+
+
+## Step 3 — Transactional Order Creation & Inventory Reservation
+
+**Runtime API:** `POST /api/v1/orders`
+
+**Request:** `{ "addressId": 123, "couponCode": "OPTIONAL-CODE", "customerNote": "Optional delivery note" }`. Client-supplied prices and totals are ignored.
+
+**Transaction flow:**
+1. Derive customer ID from the authenticated numeric principal; endpoint requires CUSTOMER role.
+2. Lock the customer's ACTIVE cart row with `SELECT ... FOR UPDATE`. A second submission cannot reuse a converted cart.
+3. Lock and verify the address belongs to the customer; read the active customer's email.
+4. Lock cart items, then lock product/variant and inventory rows in ascending variant ID order. Re-read product state, current DB price, on-hand and reserved quantities.
+5. Lock coupon row with `FOR UPDATE`; revalidate active dates, global usage limit, per-user limit, minimum spend and product/category restrictions.
+6. Recalculate the quote with the existing BigDecimal pricing/shipping/tax policies.
+7. Generate a server-side `LP-YYYYMMDD-12HEX` order number; the database unique key remains the final collision guard.
+8. Insert `customer_orders` with customer/address/email/total snapshots and `order_items` with product/variant/SKU/price/quantity/discount/line-total snapshots.
+9. Increase `inventory.quantity_reserved` under a guarded update and insert positive-quantity `RESERVATION` movements referencing the order.
+10. Increment coupon usage and insert `coupon_redemptions`; insert initial PENDING status history; convert the cart.
+11. All writes run inside one Spring `@Transactional` boundary. Any exception rolls back the order, item snapshots, stock reservations, movements, coupon redemption/usage, status history and cart conversion together.
+
+**Java OOP:** `OrderNumberGenerator` / `UuidOrderNumberGenerator` abstract order number generation; `InventoryReservationService` / `JdbcInventoryReservationService` abstract persistence-backed reservation. Existing domain/pricing classes continue to apply Encapsulation, Inheritance, Abstraction and Polymorphism.
+
+**Tests:** 3 MySQL-backed order placement integration tests cover successful snapshots/reservation/redemption/cart conversion, insufficient stock rejection without order/cart mutation, and duplicate submission prevention.
+
+### Step 3 verification result
+
+<success>PASS</success> GitHub Actions workflow: https://github.com/musa390/My-project/actions/runs/44144982747
+
+- Branch head: `785deca2657db07f944f5f659c56438a4eb233e6`.
+- Java 21 + MySQL 8.4.
+- Command: `mvn --batch-mode --no-transfer-progress clean verify`.
+- **38 tests, 0 failures, 0 errors, 0 skipped**; Maven **BUILD SUCCESS**.
+- Order placement integration: 3 tests; checkout preview integration: 6; OOP pricing unit tests: 3.
+- Flyway validated and applied V1/V2/V3 in the ephemeral CI database.
+- Owner-local verification against a separately created clean database remains pending; preserve the earlier failed local database.
