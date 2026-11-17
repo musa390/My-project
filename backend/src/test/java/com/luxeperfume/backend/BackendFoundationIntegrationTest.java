@@ -6,6 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
+import java.util.UUID;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,6 +26,9 @@ class BackendFoundationIntegrationTest {
 
     @Autowired
     private Flyway flyway;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     void healthEndpointReturnsUp() throws Exception {
@@ -53,6 +61,35 @@ class BackendFoundationIntegrationTest {
     }
 
     @Test
+    void adminAndStaffRoutesRejectAnonymousRequests() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/security"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/staff/inventory"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void csrfBootstrapIsAvailable() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void registrationHashesPasswordAndSetsHttpOnlyCookies() throws Exception {
+        String email = "phase6-" + UUID.randomUUID() + "@example.invalid";
+        mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Test\",\"lastName\":\"Customer\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().stringValues("Set-Cookie",
+                        org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("lp_access="))));
+        String hash = jdbc.queryForObject("SELECT password_hash FROM users WHERE email=?", String.class, email);
+        assertThat(hash).isNotNull().startsWith("$2");
+        assertThat(hash).isNotEqualTo("StrongPassphrase123!");
+    }
+
+    @Test
     void unsafeCookieRequestsRequireCsrfProtection() throws Exception {
         mockMvc.perform(post("/api/v1/private-test"))
                 .andExpect(status().isForbidden());
@@ -60,6 +97,6 @@ class BackendFoundationIntegrationTest {
 
     @Test
     void existingPhaseFourMigrationsAreApplied() {
-        assertThat(flyway.info().applied()).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(flyway.info().applied()).hasSizeGreaterThanOrEqualTo(3);
     }
 }
