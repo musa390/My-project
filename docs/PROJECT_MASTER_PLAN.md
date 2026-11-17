@@ -10,8 +10,8 @@ Build a full-stack perfume e-commerce platform while preserving the existing Cus
 | 1 | Project setup and GitHub | Complete — 100% |
 | 2 | Customer Frontend finalization | Complete — 100% |
 | 3 | Separate Admin Frontend | Complete — 100% |
-| 4 | MySQL database design and ERD | In progress — runtime verification pending |
-| 5 | Spring Boot backend foundation | Pending |
+| 4 | MySQL database design and ERD | **Complete — 100%** |
+| 5 | Spring Boot backend foundation | Next |
 | 6 | Authentication and authorization | Pending |
 | 7 | Product and catalog backend | Pending |
 | 8 | Cart, wishlist and inventory | Pending |
@@ -29,8 +29,8 @@ Owner confirmed verification script, typecheck, lint, production build and brows
 ## Phase 3 completion
 Admin Frontend modules and demo interactions are complete. Owner-provided typecheck, lint and production build passed; GitHub Actions run 44090886836 succeeded; owner confirmed manual browser QA. See docs/PHASE3-ADMIN-FRONTEND-REPORT.md.
 
-## Phase 4 database design
-A normalized MySQL 8.4 schema, ERD, 30-table V1 migration (37 foreign keys), V2 demo seed migration, Docker setup instructions and verification SQL are committed. Runtime database application and verification are still required before sign-off. See docs/DATABASE_DESIGN.md and database/README.md.
+## Phase 4 completion
+A normalized MySQL 8.4 schema, ERD, 30-table V1 migration, V2 demo seed migration, 37 foreign keys, 38 CHECK constraints, Docker setup, verification SQL and MySQL CI are complete. GitHub Actions run 44094846967 succeeded after applying both migrations to a disposable MySQL 8.4 database and running the verification step. See docs/PHASE4-DATABASE-REPORT.md. Local persistent setup instructions are in database/README.md.
 
 ## Core architecture
 - Separate Customer and Admin Next.js applications.
