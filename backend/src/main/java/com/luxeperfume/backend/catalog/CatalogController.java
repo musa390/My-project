@@ -188,11 +188,10 @@ public class CatalogController {
             """));
     }
     private ApiResponse<List<Map<String,Object>>> curated(String condition,String order) {
-        return ApiResponse.success("Catalog products",jdbc.queryForList("""
-            SELECT p.id,p.name,p.slug,p.short_description,p.is_featured,
-              (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE) price_min,
-              EXISTS(SELECT 1 FROM product_variants v JOIN inventory i ON i.variant_id=v.id WHERE v.product_id=p.id AND i.quantity_on_hand>i.quantity_reserved AND v.is_active=TRUE) available
-            FROM products p WHERE p.status='ACTIVE' AND p.deleted_at IS NULL AND """+condition+" ORDER BY "+order+" LIMIT 20"));
+        String sql = "SELECT p.id,p.name,p.slug,p.short_description,p.is_featured " +
+            "FROM products p WHERE p.status='ACTIVE' AND p.deleted_at IS NULL AND " +
+            condition + " ORDER BY " + order + " LIMIT 20";
+        return ApiResponse.success("Catalog products",jdbc.queryForList(sql));
     }
 
     @GetMapping("/api/v1/staff/catalog/products")
