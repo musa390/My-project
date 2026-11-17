@@ -342,7 +342,7 @@ public class CatalogController {
     @PreAuthorize("hasAuthority('PERM_inventory.write')")
     public ApiResponse<Map<String,Object>> updateInventory(@PathVariable long variantId,@RequestBody Map<String,Object> body) {
         one("SELECT id FROM product_variants WHERE id=? FOR UPDATE",variantId);
-        List<Map<String,Object>> currentRows=jdbc.queryForList("SELECT quantity_on_hand,quantity_reserved FROM inventory WHERE variant_id=? FOR UPDATE",variantId);
+        List<Map<String,Object>> currentRows=jdbc.queryForList("SELECT quantity_on_hand,quantity_reserved,reorder_level FROM inventory WHERE variant_id=? FOR UPDATE",variantId);
         long oldOnHand=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("quantity_on_hand")).longValue();
         long oldReserved=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("quantity_reserved")).longValue();
         long oldReorder=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("reorder_level")).longValue();
