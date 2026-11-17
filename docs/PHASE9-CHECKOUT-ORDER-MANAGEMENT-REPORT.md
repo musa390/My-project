@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Progress Report
 
-**Status:** Steps 1–4 runtime implementation committed; Step 3 GitHub Maven CI PASS. Step 4 automated CI verification pending. Staff/Admin order management remains pending.
+**Status:** Steps 1–5 runtime implementation committed; latest branch-head GitHub Maven CI PASS. Final regression/security review and owner-local clean-database verification remain pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 
@@ -11,7 +11,7 @@
 - Backend CI workflow will be extended to run for Phase 9 branch pushes and pull requests.
 
 ## Next implementation work
-Implement Staff/Admin order list/detail/status transitions and order read/write permission separation. Then complete final regression/security review and owner-local clean-database verification. See `PHASE9-CHECKOUT-ORDER-MANAGEMENT-PLAN.md` for transaction rules, security boundaries and acceptance tests.
+Complete final regression/security review and owner-local clean-database verification. Staff/Admin order list/detail/status transitions and order read/write permission separation are implemented. See `PHASE9-CHECKOUT-ORDER-MANAGEMENT-PLAN.md` for transaction rules, security boundaries and acceptance tests.
 
 ## Acceptance
 Phase 9 is not complete until Customer order creation/history/tracking/cancellation and Staff/Admin order management are implemented, backend-calculated totals and atomic stock reservation are verified by MySQL 8.4 integration tests, CI passes, and protected frontend/schema constraints are respected.
@@ -133,4 +133,4 @@ Added `OrderStatusTransitionPolicy` and `DefaultOrderStatusTransitionPolicy` for
 **Step 5 verification: PASS.** GitHub Actions run 44148435956 — Java 21 + MySQL 8.4, `mvn --batch-mode --no-transfer-progress clean verify`, **45 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**. This run includes the four Customer Order Management tests and three Staff Order Management tests. Flyway V1/V2/V3 were applied in the ephemeral CI database.
 
 ## Remaining Phase 9 scope
-Customer and Staff/Admin order history/detail/tracking/status management and permission separation are implemented and CI-verified. Remaining Phase 9 scope: final API documentation, full regression/security review and owner-local clean-database verification.
+Customer and Staff/Admin order history/detail/tracking/status management and permission separation are implemented and CI-verified. Remaining Phase 9 scope: final regression/security review and owner-local clean-database verification.
