@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Progress Report
 
-**Status:** Step 1 audit and Step 2 Checkout Validation/Pricing Engine implementation complete; Step 2 GitHub Maven CI PASS. Order creation and management remain pending.
+**Status:** Steps 1–3 runtime implementation complete; Step 3 GitHub Maven CI PASS. Customer order history/detail/cancellation and Staff/Admin order management remain pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 
@@ -11,7 +11,7 @@
 - Backend CI workflow will be extended to run for Phase 9 branch pushes and pull requests.
 
 ## Next implementation work
-See `PHASE9-CHECKOUT-ORDER-MANAGEMENT-PLAN.md` for the API contract, transaction rules, security boundaries, cancellation policy and test checklist.
+Implement customer order history/detail/tracking/cancellation, then Staff/Admin order list/detail/status transitions. See `PHASE9-CHECKOUT-ORDER-MANAGEMENT-PLAN.md` for transaction rules, security boundaries and acceptance tests.
 
 ## Acceptance
 Phase 9 is not complete until Customer order creation/history/tracking/cancellation and Staff/Admin order management are implemented, backend-calculated totals and atomic stock reservation are verified by MySQL 8.4 integration tests, CI passes, and protected frontend/schema constraints are respected.
@@ -49,7 +49,7 @@ The existing V1 schema already supports the planned Phase 9 workflow. No V4 migr
 
 ## Java 21 OOP requirement
 
-The project owner confirmed that Java OOP is the primary backend programming approach and all four pillars are mandatory in Phase 9. A dedicated architecture document now maps Encapsulation, Inheritance, Abstraction and Polymorphism to concrete checkout/order domain classes, strategy interfaces, services and tests. This is architecture documentation only; runtime Java classes and APIs have not yet been implemented or tested.
+The project owner confirmed that Java OOP is the primary backend programming approach and all four pillars are mandatory in Phase 9. A dedicated architecture document now maps Encapsulation, Inheritance, Abstraction and Polymorphism to concrete checkout/order domain classes, strategy interfaces, services and tests. This architecture is now used by the runtime pricing and order-placement classes; Step 3 is verified by MySQL 8.4 GitHub Actions.
 
 
 ## Step 2 — Checkout Validation & Pricing Engine
@@ -60,7 +60,7 @@ The project owner confirmed that Java OOP is the primary backend programming app
 - Added percentage/fixed coupon strategies with date, usage, minimum-spend, maximum-discount and product/category-scope validation.
 - Added configurable server-side flat shipping and percentage tax policies. Development defaults are explicitly 0.00 / 0.00%; production values must be configured.
 - Checkout preview does not create orders, reserve stock, consume coupon usage or mutate carts.
-- Added OOP unit tests and MySQL-backed API integration tests. **GitHub Actions verification is pending; no Maven PASS claim is made yet.**
+- Added OOP unit tests and MySQL-backed API integration tests. GitHub Actions run 44143372079 passed at the Step 2 checkpoint; Step 3 is covered by the latest 38-test run below.
 
 
 ### Step 2 — Maven verification: PASS
@@ -72,3 +72,33 @@ The project owner confirmed that Java OOP is the primary backend programming app
 - Checkout integration: 6 tests; OOP pricing unit tests: 3 tests.
 - Flyway V1/V2/V3 applied successfully in CI.
 - The run verifies the Step 2 branch checkpoint. Owner-local clean-database verification remains pending; preserve the earlier failed local database.
+
+
+## Step 3 — Transactional Order Creation & Inventory Reservation
+
+Implemented authenticated Customer endpoint `POST /api/v1/orders`.
+
+### Runtime implementation
+- `OrderApplicationService` coordinates the entire order workflow in one Spring `@Transactional` method.
+- Locks the customer's ACTIVE cart, owned delivery address, cart lines, sellable variants and inventory rows.
+- Locks variants/inventory in ascending variant ID order; recalculates current prices and stock from MySQL rather than trusting checkout preview or browser totals.
+- Locks and revalidates coupon usage, dates, minimum spend and product/category scope before redemption.
+- Generates server-side order numbers using `OrderNumberGenerator` / `UuidOrderNumberGenerator`; the unique database key enforces uniqueness.
+- Writes customer order totals and shipping snapshots, item name/variant/SKU/price/quantity/discount snapshots and initial PENDING status history.
+- Reserves stock by increasing `quantity_reserved` with a guarded update and writes positive-quantity `RESERVATION` movement records referencing the order.
+- Increments coupon usage and creates the coupon redemption record.
+- Converts the active cart only after all other order writes succeed. A repeated submission cannot create a second order from the converted cart.
+- Any failure rolls back all writes in the transaction. No payment is marked PAID; payment gateway work remains Phase 10.
+
+### Step 3 — Maven verification: PASS
+
+- GitHub Actions: https://github.com/musa390/My-project/actions/runs/44144982747
+- Branch head: `785deca2657db07f944f5f659c56438a4eb233e6`.
+- Java 21 + MySQL 8.4; `mvn --batch-mode --no-transfer-progress clean verify`.
+- **38 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS.**
+- Order placement integration: 3 tests; checkout preview integration: 6; OOP pricing unit tests: 3.
+- Flyway validated/applied V1/V2/V3 in the ephemeral CI database.
+- Owner-local clean-database verification remains pending; preserve the earlier failed local database.
+
+## Remaining Phase 9 scope
+Customer order history, detail/tracking and cancellation with exactly-once stock release; Staff/Admin order list/detail/status transitions and read/write permission separation; final API documentation, full regression/security review and owner-local clean-database verification.
