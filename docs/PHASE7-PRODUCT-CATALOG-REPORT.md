@@ -48,7 +48,7 @@ Only ACTIVE, non-deleted products are exposed publicly. Inactive variants are ex
 
 ## Verification results
 
-<badge color="success">PASS — latest GitHub Actions run</badge>
+**PASS — latest GitHub Actions run**
 
 - Run: https://github.com/musa390/My-project/actions/runs/44132093917
 - Push run: https://github.com/musa390/My-project/actions/runs/44132074657
