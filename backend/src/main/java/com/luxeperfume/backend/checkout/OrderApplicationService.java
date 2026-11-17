@@ -7,6 +7,7 @@ import com.luxeperfume.backend.checkout.dto.OrderPlacementRequest;
 import com.luxeperfume.backend.checkout.dto.OrderPlacementResponse;
 import com.luxeperfume.backend.checkout.inventory.InventoryReservationService;
 import com.luxeperfume.backend.checkout.pricing.CheckoutQuoteService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class OrderApplicationService {
     private final OrderNumberGenerator orderNumberGenerator;
     private final Clock clock;
 
+    @Autowired
     public OrderApplicationService(JdbcTemplate jdbc, CheckoutQuoteService quoteService,
                                    InventoryReservationService inventoryReservationService,
                                    OrderNumberGenerator orderNumberGenerator) {
