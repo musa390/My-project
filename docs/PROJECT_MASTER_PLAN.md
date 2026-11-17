@@ -9,8 +9,8 @@ Build a full-stack perfume e-commerce platform while preserving the existing Cus
 | 0 | Project audit and planning | Complete |
 | 1 | Project setup and GitHub | Complete — 100% |
 | 2 | Customer Frontend finalization | Complete — 100% |
-| 3 | Separate Admin Frontend | Interfaces implemented — QA pending |
-| 4 | MySQL database design and ERD | Pending |
+| 3 | Separate Admin Frontend | **Complete — 100%** |
+| 4 | MySQL database design and ERD | Next |
 | 5 | Spring Boot backend foundation | Pending |
 | 6 | Authentication and authorization | Pending |
 | 7 | Product and catalog backend | Pending |
@@ -26,8 +26,8 @@ Build a full-stack perfume e-commerce platform while preserving the existing Cus
 ## Phase 2 completion
 Owner confirmed verification script, typecheck, lint, production build and browser QA passed. See `docs/PHASE2-CUSTOMER-FRONTEND-REPORT.md`. Authentication, OAuth, persistent data and live payments remain out of scope.
 
-## Phase 3 scope
-Build the separate `admin-frontend/` only. Initial scaffold and dashboard shell are committed. Complete management screens, interactions, responsive/accessibility states and QA using labelled demo data until API/database integration. Do not modify `customer-frontend/` without explicit approval.
+## Phase 3 completion
+Admin Frontend modules and demo interactions are complete. Owner-provided local typecheck, lint and production build passed; GitHub Actions run 44090886836 succeeded, including the Phase 3 verification script; owner confirmed manual browser QA completed. See `docs/PHASE3-ADMIN-FRONTEND-REPORT.md`. Admin data is demo-only and in-memory; backend persistence, real authentication, payments, email and role enforcement remain later-phase work.
 
 ## Core architecture
 - Separate Customer and Admin Next.js applications.
