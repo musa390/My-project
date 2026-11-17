@@ -19,13 +19,17 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final AuthService auth;
     private final boolean secure;
     private final long refreshDays;
+    private final long accessMinutes;
     private final String redirectUrl;
 
     public OAuth2LoginSuccessHandler(AuthService auth,
             @Value("${app.security.cookies.secure}") boolean secure,
             @Value("${app.security.jwt.refresh-days}") long refreshDays,
-            @Value("${app.security.oauth-success-redirect}") String redirectUrl) {
-        this.auth = auth; this.secure = secure; this.refreshDays = refreshDays; this.redirectUrl = redirectUrl;
+            @Value("${app.security.jwt.access-minutes}") long accessMinutes,
+            @Value("${app.security.oauth-success-redirect}") String redirectUrl,
+            @Value("${spring.profiles.active:}") String activeProfiles) {
+        if (activeProfiles.contains("prod") && !secure) throw new IllegalStateException("Production auth cookies must be Secure.");
+        this.auth = auth; this.secure = secure; this.refreshDays = refreshDays; this.accessMinutes = accessMinutes; this.redirectUrl = redirectUrl;
     }
 
     @Override
@@ -39,7 +43,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 request.getRemoteAddr());
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("lp_access", session.accessToken())
                 .httpOnly(true).secure(secure).sameSite("Lax").path("/api")
-                .maxAge(Duration.ofMinutes(10)).build().toString());
+                .maxAge(Duration.ofMinutes(accessMinutes)).build().toString());
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("lp_refresh", session.refreshToken())
                 .httpOnly(true).secure(secure).sameSite("Lax").path("/api/v1/auth")
                 .maxAge(Duration.ofDays(refreshDays)).build().toString());
