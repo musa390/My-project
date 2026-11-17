@@ -42,6 +42,18 @@ class CartWishlistInventoryIntegrationTest {
             .andExpect(jsonPath("$.data.items.length()").value(1))
             .andExpect(jsonPath("$.data.subtotal").value(2500));
 
+        mockMvc.perform(post("/api/v1/auth/logout").with(csrf()).cookie(customer.access(), customer.refresh()))
+            .andExpect(status().isOk());
+        MvcResult signedInAgain = mockMvc.perform(post("/api/v1/auth/login").with(csrf())
+                .contentType("application/json")
+                .content("{\"email\":\"" + customer.email() + "\",\"password\":\"StrongPassphrase123!\"}"))
+            .andExpect(status().isOk()).andReturn();
+        Cookie renewedAccess = signedInAgain.getResponse().getCookie("lp_access");
+        mockMvc.perform(get("/api/v1/cart").cookie(renewedAccess))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items.length()").value(1))
+            .andExpect(jsonPath("$.data.subtotal").value(2500));
+
         jdbc.update("UPDATE product_variants SET price=1400 WHERE id=?", variantId);
         mockMvc.perform(get("/api/v1/cart").cookie(customer.access()))
             .andExpect(status().isOk())
@@ -175,7 +187,7 @@ class CartWishlistInventoryIntegrationTest {
             .andExpect(status().isOk()).andReturn();
         Cookie access = result.getResponse().getCookie("lp_access");
         Long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long.class, email);
-        return new Session(access, userId);
+        return new Session(access, result.getResponse().getCookie("lp_refresh"), userId, email);
     }
 
     private long createActiveProduct() {
@@ -202,5 +214,5 @@ class CartWishlistInventoryIntegrationTest {
         jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='INVENTORY_STAFF'", userId);
     }
 
-    private record Session(Cookie access, long userId) {}
+    private record Session(Cookie access, Cookie refresh, long userId, String email) {}
 }
