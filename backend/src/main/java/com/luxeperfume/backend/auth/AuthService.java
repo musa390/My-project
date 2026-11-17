@@ -61,7 +61,7 @@ public class AuthService {
     public IssuedSession register(String email, String password, String firstName, String lastName,
                                  String userAgent, String ip) {
         String normalized = email.trim().toLowerCase();
-        if (password.length() < 12 || password.length() > 72)
+        if (password.length() < 12 || password.getBytes(StandardCharsets.UTF_8).length > 72)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be 12-72 characters");
         try {
             KeyHolder key = new GeneratedKeyHolder();
@@ -108,7 +108,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google account email must be verified");
 
         List<Long> existing = jdbc.query(
-                "SELECT id FROM users WHERE auth_provider='GOOGLE' AND provider_subject=? AND deleted_at IS NULL",
+                "SELECT id FROM users WHERE auth_provider='GOOGLE' AND provider_subject=? AND account_status='ACTIVE' AND deleted_at IS NULL",
                 (rs, n) -> rs.getLong(1), subject);
         long userId;
         if (!existing.isEmpty()) {
@@ -142,7 +142,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         String oldHash = sha256(refreshToken);
         List<Map<String,Object>> rows = jdbc.queryForList(
-                "SELECT id,user_id,(expires_at > UTC_TIMESTAMP()) AS valid,revoked_at FROM auth_sessions WHERE refresh_token_hash=? FOR UPDATE", oldHash);
+                "SELECT s.id,s.user_id,(s.expires_at > UTC_TIMESTAMP()) AS valid,s.revoked_at FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.refresh_token_hash=? AND u.account_status='ACTIVE' AND u.deleted_at IS NULL FOR UPDATE", oldHash);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         Map<String,Object> row = rows.getFirst();
         if (row.get("revoked_at") != null || !isTrue(row.get("valid")))
@@ -191,7 +191,7 @@ public class AuthService {
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        if (newPassword.length() < 12 || newPassword.length() > 72)
+        if (newPassword.length() < 12 || newPassword.getBytes(StandardCharsets.UTF_8).length > 72)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be 12-72 characters");
         List<Map<String,Object>> rows = jdbc.queryForList(
                 "SELECT id,user_id,(expires_at > UTC_TIMESTAMP()) AS valid,used_at FROM password_reset_tokens WHERE token_hash=? FOR UPDATE",
