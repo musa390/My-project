@@ -6,7 +6,7 @@
 - Phase 2: Complete — 100%.
 - Phase 3: Complete — 100%.
 - Phase 4: Complete — 100%; MySQL 8.4 migrations, seed data and verification CI passed.
-- **Current: Phase 5 — Spring Boot Backend Foundation (In Progress).**
+- **Current: Phase 5 — Backend Foundation (implementation and CI verified; local owner verification pending).**
 
 ## Sources of truth
 - docs/PROJECT_MASTER_PLAN.md
@@ -25,25 +25,28 @@ customer-frontend/ is the approved baseline. Do not change Customer Website sour
 - ERD, data integrity rules and documented migration policy.
 - V1 schema and V2 illustrative sample data migrations.
 - SQL verification queries and MySQL 8.4 GitHub Actions CI.
-- CI run 44094846967 passed: MySQL service healthy, V1 applied, V2 applied and verification step successful.
+- Database Migration CI run 44109253809 passed: MySQL service healthy, V1 applied, V2 applied and verification step successful.
 - Local persistent database setup instructions: database/README.md.
 
 ## Phase 5 current work
 - Working branch: phase5/backend-foundation.
 - Java 21 + Spring Boot 4.1.2 + Maven application scaffold.
 - MySQL environment configuration, JPA validation mode and Flyway discovery.
-- Common response DTOs, global exception handling, health API, CORS and OpenAPI.
-- Integration tests, environment loader script and MySQL-backed CI.
+- Common response DTOs, global exception handling, validation mapping, health API, CORS and OpenAPI.
+- Shared JPA BaseEntity, BaseRepository, CrudService and transactional AbstractCrudService.
+- Integration tests cover API health, database-aware Actuator health, OpenAPI JSON and Flyway V1/V2.
+- Backend Foundation CI run 44109910795 passed on commit f252915e050cd0a9e1f7434f21d7e98fc0973b04.
+- MySQL 8.4 compatibility fix: generated columns involved in cascading foreign keys use VIRTUAL generated columns.
+- Local verification is still required before Phase 5 is declared 100% complete.
 - See backend/README.md for local PowerShell commands.
-- Do not edit applied V1/V2 migrations; future changes start at V3.
-- Local build and database verification must pass before Phase 5 can be marked complete.
+- Do not modify migrations already applied to a persistent database. If an existing local database has the previous V1 checksum, stop before running the updated branch and reconcile its Flyway history safely; do not drop the database.
 
 ## Phase 5 completion gate
-1. JDK 21 and Maven installed.
+1. JDK 21 and Maven installed locally.
 2. Docker Engine running; MySQL 8.4 container healthy.
-3. Maven clean verify passes locally.
-4. Flyway applies V1 and V2 to the local database.
+3. Maven clean verify passes locally using the current branch.
+4. Flyway applies V1 and V2 to the intended local database, with any pre-existing migration history handled safely.
 5. Backend starts and connects to MySQL.
 6. Health, Actuator health, Swagger UI and OpenAPI endpoints work.
-7. GitHub Actions backend CI passes.
+7. GitHub Actions backend CI passes — **PASS**.
 8. Customer and Admin frontend source trees remain unchanged.
