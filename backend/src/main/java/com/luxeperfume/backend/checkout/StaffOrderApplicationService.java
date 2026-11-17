@@ -50,7 +50,7 @@ public class StaffOrderApplicationService {
         List<Object> pageArgs = new ArrayList<>(args);
         pageArgs.add(safeSize);
         pageArgs.add(offset);
-        List<Map<String, Object>> items = jdbc.queryForList("""
+        List<Map<String, Object>> items = camelCaseRows(jdbc.queryForList("""
                 SELECT o.id,o.order_number,o.user_id,o.order_status,o.payment_status,o.currency,
                        o.subtotal,o.discount_total,o.shipping_total,o.tax_total,o.grand_total,
                        o.shipping_recipient,o.shipping_phone,o.customer_email,o.shipping_city,
@@ -59,7 +59,7 @@ public class StaffOrderApplicationService {
                        (SELECT COALESCE(SUM(oi.quantity),0) FROM order_items oi WHERE oi.order_id=o.id) AS item_count
                 FROM customer_orders o
                 """ + where + " ORDER BY COALESCE(o.placed_at,o.created_at) DESC,o.id DESC LIMIT ? OFFSET ?",
-                pageArgs.toArray());
+                pageArgs.toArray()));
 
         long total = count == null ? 0 : count;
         Map<String, Object> result = new LinkedHashMap<>();
@@ -75,20 +75,20 @@ public class StaffOrderApplicationService {
     public Map<String, Object> detail(String orderNumber) {
         Map<String, Object> order = findOrder(orderNumber);
         long orderId = number(order.get("id"));
-        order.put("items", jdbc.queryForList("""
+        order.put("items", camelCaseRows(jdbc.queryForList("""
                 SELECT id,variant_id,product_name_snapshot,variant_name_snapshot,sku_snapshot,
                        unit_price,quantity,line_discount,line_total,created_at
                 FROM order_items WHERE order_id=? ORDER BY id
-                """, orderId));
-        order.put("statusHistory", jdbc.queryForList("""
+                """, orderId)));
+        order.put("statusHistory", camelCaseRows(jdbc.queryForList("""
                 SELECT from_status,to_status,note,changed_by,created_at
                 FROM order_status_history WHERE order_id=? ORDER BY created_at,id
-                """, orderId));
-        order.put("payments", jdbc.queryForList("""
+                """, orderId)));
+        order.put("payments", camelCaseRows(jdbc.queryForList("""
                 SELECT id,provider,payment_method,provider_transaction_id,provider_reference,
                        amount,currency,payment_status,initiated_at,completed_at,created_at
                 FROM payments WHERE order_id=? ORDER BY created_at,id
-                """, orderId));
+                """, orderId)));
         return order;
     }
 
@@ -193,7 +193,29 @@ public class StaffOrderApplicationService {
                 FROM customer_orders WHERE order_number=?
                 """, orderNumber);
         if (order == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
-        return order;
+        return camelCaseMap(order);
+    }
+
+
+    private static List<Map<String, Object>> camelCaseRows(List<Map<String, Object>> rows) {
+        return rows.stream().map(StaffOrderApplicationService::camelCaseMap).toList();
+    }
+
+    private static Map<String, Object> camelCaseMap(Map<String, Object> row) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        row.forEach((key, value) -> {
+            StringBuilder converted = new StringBuilder();
+            boolean upperNext = false;
+            for (char character : key.toCharArray()) {
+                if (character == '_') upperNext = true;
+                else {
+                    converted.append(upperNext ? Character.toUpperCase(character) : character);
+                    upperNext = false;
+                }
+            }
+            result.put(converted.toString(), value);
+        });
+        return result;
     }
 
     private Map<String, Object> oneOrNull(String sql, Object... args) {
