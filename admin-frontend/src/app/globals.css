@@ -1,2 +1,4 @@
 @import "tailwindcss";
 :root{color-scheme:dark;--ink:#f5f0e8;--muted:#a69c8d;--panel:#171512;--line:#302a22;--gold:#c7a56a}*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:#100f0d;color:var(--ink);font-family:Arial,Helvetica,sans-serif}a{color:inherit;text-decoration:none}::selection{background:#8b6d3e;color:white}
+
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}button,a,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed}input::placeholder{color:#81796e}@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
