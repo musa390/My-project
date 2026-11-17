@@ -23,7 +23,7 @@ Get-Content -Raw .\backend\src\main\resources\db\migration\V2__insert_developmen
 ~~~powershell
 Get-Content -Raw .\database\verification\phase4_verify.sql | docker compose exec -T mysql sh -c 'exec mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"'
 ~~~
-Expected checks: 29 tables, 35 foreign keys, RBAC catalog, two demo products/variants and stock, sample coupon and newsletter row. Every result must be PASS. Stop and share the full error if any command fails.
+Expected checks: 30 tables, 37 foreign keys, RBAC catalog, two demo products/variants and stock, sample coupon and newsletter row. Every result must be PASS. Stop and share the full error if any command fails.
 
 ## Safety
 All seed rows are illustrative. No real user, admin credential or payment is seeded. Keep .env private and do not expose MySQL publicly. Never edit an already-applied migration; add V3+ instead.
