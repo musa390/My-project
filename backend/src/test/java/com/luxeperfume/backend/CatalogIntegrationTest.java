@@ -111,6 +111,13 @@ class CatalogIntegrationTest {
         mockMvc.perform(get("/api/v1/catalog/categories/" + slug))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.name").value(name));
+        mockMvc.perform(get("/api/v1/staff/catalog/categories").cookie(access))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray());
+        mockMvc.perform(get("/api/v1/staff/catalog/brands").cookie(access))
+            .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/staff/catalog/collections").cookie(access))
+            .andExpect(status().isOk());
     }
 
     @Test
@@ -152,6 +159,9 @@ class CatalogIntegrationTest {
             .andExpect(jsonPath("$.data.variants.length()").value(1))
             .andExpect(jsonPath("$.data.images.length()").value(1))
             .andExpect(jsonPath("$.data.available_stock").value(7));
+        mockMvc.perform(get("/api/v1/staff/catalog/products/" + productId).cookie(access))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(productId));
         assertThat(jdbc.queryForObject("SELECT status FROM products WHERE id=?",String.class,productId)).isEqualTo("ACTIVE");
     }
 
