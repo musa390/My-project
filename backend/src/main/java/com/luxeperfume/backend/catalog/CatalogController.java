@@ -1,8 +1,6 @@
 package com.luxeperfume.backend.catalog;
 
 import com.luxeperfume.backend.common.dto.ApiResponse;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -24,15 +22,13 @@ import java.util.stream.Collectors;
 @RestController
 public class CatalogController {
     private final JdbcTemplate jdbc;
-    private final ObjectMapper mapper;
 
     @Value("${CLOUDINARY_CLOUD_NAME:}") private String cloudName;
     @Value("${CLOUDINARY_API_KEY:}") private String cloudApiKey;
     @Value("${CLOUDINARY_API_SECRET:}") private String cloudApiSecret;
 
-    public CatalogController(JdbcTemplate jdbc, ObjectMapper mapper) {
+    public CatalogController(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
-        this.mapper = mapper;
     }
 
     private static String text(Map<String,Object> body, String key, String fallback) {
@@ -257,13 +253,14 @@ public class CatalogController {
 
     @PostMapping("/api/v1/staff/catalog/products/{id}/variants")
     @PreAuthorize("hasAuthority('PERM_products.write')")
-    public ApiResponse<Map<String,Object>> createVariant(@PathVariable long id,@RequestBody Map<String,Object> body) throws JsonProcessingException {
+    public ApiResponse<Map<String,Object>> createVariant(@PathVariable long id,@RequestBody Map<String,Object> body) {
         one("SELECT id FROM products WHERE id=? AND deleted_at IS NULL",id);
         String sku=text(body,"sku","").toUpperCase(Locale.ROOT), name=text(body,"variantName","");
         BigDecimal price=new BigDecimal(text(body,"price","-1"));
         if(sku.isBlank()||name.isBlank()||price.signum()<0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"sku, variantName and non-negative price are required");
         Object options=body.get("optionValues");
-        String optionsJson=options==null?null:(options instanceof String s?s:mapper.writeValueAsString(options));
+        if(options!=null && !(options instanceof String)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"optionValues must be a valid JSON string");
+        String optionsJson=(String)options;
         jdbc.update("INSERT INTO product_variants(product_id,sku,variant_name,option_values,volume_ml,price,compare_at_price,cost_price,weight_grams,is_default,is_active) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
             id,sku,name,optionsJson,body.get("volumeMl"),price,body.get("compareAtPrice"),body.get("costPrice"),body.get("weightGrams"),bool(body,"isDefault",false),bool(body,"isActive",true));
         Long variantId=jdbc.queryForObject("SELECT id FROM product_variants WHERE sku=?",Long.class,sku);
