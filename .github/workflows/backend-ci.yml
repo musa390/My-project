@@ -50,5 +50,10 @@ jobs:
           java-version: "21"
           cache: maven
       - name: Build, test and verify Flyway migrations
+        id: backend-verify
         working-directory: backend
         run: mvn --batch-mode --no-transfer-progress clean verify
+      - name: Diagnose MySQL foreign-key failure
+        if: failure()
+        run: |
+          mysql --host=127.0.0.1 --port=3306 --user=root --password=ci_root_password luxe_perfume --execute="SHOW ENGINE INNODB STATUS\\G"
