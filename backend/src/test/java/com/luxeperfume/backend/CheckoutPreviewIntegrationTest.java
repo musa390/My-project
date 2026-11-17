@@ -84,6 +84,47 @@ class CheckoutPreviewIntegrationTest {
     }
 
     @Test
+    void restrictedCouponDiscountsOnlyEligibleProductLines() throws Exception {
+        Session customer = register("checkout-restricted");
+        long eligibleVariant = createVariant(new BigDecimal("1000.00"), 5);
+        long otherVariant = createVariant(new BigDecimal("500.00"), 5);
+        addToCart(customer.userId(), eligibleVariant, 1);
+        long cartId = jdbc.queryForObject("SELECT id FROM carts WHERE user_id=? AND cart_status='ACTIVE'",
+                Long.class, customer.userId());
+        jdbc.update("INSERT INTO cart_items(cart_id,variant_id,quantity) VALUES(?,?,1)", cartId, otherVariant);
+        long addressId = createAddress(customer.userId());
+        String couponCode = createCoupon("FIXED", new BigDecimal("100.00"), null, BigDecimal.ZERO);
+        long eligibleProductId = jdbc.queryForObject("SELECT product_id FROM product_variants WHERE id=?",
+                Long.class, eligibleVariant);
+        long couponId = jdbc.queryForObject("SELECT id FROM coupons WHERE code=?", Long.class, couponCode);
+        jdbc.update("INSERT INTO coupon_products(coupon_id,product_id) VALUES(?,?)", couponId, eligibleProductId);
+
+        mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totals.subtotal").value(1500))
+            .andExpect(jsonPath("$.data.totals.discountTotal").value(100))
+            .andExpect(jsonPath("$.data.items[?(@.variantId == " + eligibleVariant + ")].lineDiscount").value(100))
+            .andExpect(jsonPath("$.data.items[?(@.variantId == " + otherVariant + ")].lineDiscount").value(0));
+    }
+
+    @Test
+    void previewRejectsCouponWhenGlobalUsageLimitHasBeenReached() throws Exception {
+        Session customer = register("checkout-usage-limit");
+        long variantId = createVariant(new BigDecimal("800.00"), 5);
+        addToCart(customer.userId(), variantId, 1);
+        long addressId = createAddress(customer.userId());
+        String couponCode = createCoupon("FIXED", new BigDecimal("50.00"), null, BigDecimal.ZERO);
+        jdbc.update("UPDATE coupons SET usage_limit=1,usage_count=1 WHERE code=?", couponCode);
+
+        mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode))))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
     void previewRejectsCouponBelowMinimumAndUnauthenticatedAccess() throws Exception {
         Session customer = register("checkout-minimum");
         long variantId = createVariant(new BigDecimal("500.00"), 5);
