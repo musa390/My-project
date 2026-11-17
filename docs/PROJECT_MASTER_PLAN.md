@@ -11,7 +11,7 @@ Build a full-stack perfume e-commerce platform while preserving the existing Cus
 | 2 | Customer Frontend finalization | Complete — 100% |
 | 3 | Separate Admin Frontend | Complete — 100% |
 | 4 | MySQL database design and ERD | **Complete — 100%** |
-| 5 | Spring Boot backend foundation | Next |
+| 5 | Spring Boot backend foundation | **In Progress** |
 | 6 | Authentication and authorization | Pending |
 | 7 | Product and catalog backend | Pending |
 | 8 | Cart, wishlist and inventory | Pending |
@@ -31,6 +31,9 @@ Admin Frontend modules and demo interactions are complete. Owner-provided typech
 
 ## Phase 4 completion
 A normalized MySQL 8.4 schema, ERD, 30-table V1 migration, V2 demo seed migration, 37 foreign keys, 38 CHECK constraints, Docker setup, verification SQL and MySQL CI are complete. GitHub Actions run 44094846967 succeeded after applying both migrations to a disposable MySQL 8.4 database and running the verification step. See docs/PHASE4-DATABASE-REPORT.md. Local persistent setup instructions are in database/README.md.
+
+## Phase 5 current implementation
+The `phase-5-backend-foundation` branch contains the Java 21 / Spring Boot 3.5.7 Maven scaffold, MySQL/JPA/Flyway configuration, Validation, Actuator, OpenAPI, CORS and a layered Category API example. Docker Compose can build and run the backend after MySQL is healthy. Backend CI and local MySQL startup/API checks are pending verification. See backend/README.md.
 
 ## Core architecture
 - Separate Customer and Admin Next.js applications.
