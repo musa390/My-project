@@ -299,7 +299,9 @@ public class CatalogController {
         jdbc.update("INSERT INTO product_variants(product_id,sku,variant_name,option_values,volume_ml,price,compare_at_price,cost_price,weight_grams,is_default,is_active) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
             id,sku,name,optionsJson,body.get("volumeMl"),price,body.get("compareAtPrice"),body.get("costPrice"),body.get("weightGrams"),bool(body,"isDefault",false),bool(body,"isActive",true));
         Long variantId=jdbc.queryForObject("SELECT id FROM product_variants WHERE sku=?",Long.class,sku);
-        jdbc.update("INSERT INTO inventory(variant_id,quantity_on_hand,quantity_reserved,reorder_level) VALUES(?,?,0,?)",variantId,number(body,"initialStock",0),number(body,"reorderLevel",0));
+        long initialStock=number(body,"initialStock",0), reorderLevel=number(body,"reorderLevel",0);
+        if(initialStock<0||reorderLevel<0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Initial stock and reorder level cannot be negative");
+        jdbc.update("INSERT INTO inventory(variant_id,quantity_on_hand,quantity_reserved,reorder_level) VALUES(?,?,0,?)",variantId,initialStock,reorderLevel);
         return ApiResponse.success("Variant created",one("SELECT v.*,i.quantity_on_hand,i.quantity_reserved,i.reorder_level FROM product_variants v JOIN inventory i ON i.variant_id=v.id WHERE v.id=?",variantId));
     }
     @Transactional
