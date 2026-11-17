@@ -9,7 +9,7 @@ Build a full-stack perfume e-commerce platform while preserving the existing Cus
 | 0 | Project audit and planning | Complete |
 | 1 | Project setup and GitHub | Complete — 100% |
 | 2 | Customer Frontend finalization | Complete — 100% |
-| 3 | Separate Admin Frontend | In progress |
+| 3 | Separate Admin Frontend | Interfaces implemented — QA pending |
 | 4 | MySQL database design and ERD | Pending |
 | 5 | Spring Boot backend foundation | Pending |
 | 6 | Authentication and authorization | Pending |
