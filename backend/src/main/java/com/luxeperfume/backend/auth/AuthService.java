@@ -25,9 +25,12 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class AuthService {
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final JdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwt;
@@ -139,10 +142,10 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         String oldHash = sha256(refreshToken);
         List<Map<String,Object>> rows = jdbc.queryForList(
-                "SELECT id,user_id,expires_at,revoked_at FROM auth_sessions WHERE refresh_token_hash=? FOR UPDATE", oldHash);
+                "SELECT id,user_id,(expires_at > UTC_TIMESTAMP()) AS valid,revoked_at FROM auth_sessions WHERE refresh_token_hash=? FOR UPDATE", oldHash);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         Map<String,Object> row = rows.getFirst();
-        if (row.get("revoked_at") != null || !((LocalDateTime) row.get("expires_at")).isAfter(LocalDateTime.now()))
+        if (row.get("revoked_at") != null || !Boolean.TRUE.equals(row.get("valid")))
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         String sessionId = (String) row.get("id");
         long userId = ((Number) row.get("user_id")).longValue();
@@ -171,13 +174,18 @@ public class AuthService {
                 userId, sha256(token));
         if (resendKey != null && !resendKey.isBlank()) {
             String link = resetUrl + (resetUrl.contains("?") ? "&" : "?") + "token=" + token;
-            RestClient.create("https://api.resend.com")
-                    .post().uri("/emails")
-                    .header("Authorization", "Bearer " + resendKey)
-                    .body(Map.of("from", emailFrom, "to", List.of(email.trim()),
-                            "subject", "Reset your LUXE PERFUME password",
-                            "text", "Use this one-time link within 30 minutes: " + link))
-                    .retrieve().toBodilessEntity();
+            try {
+                RestClient.create("https://api.resend.com")
+                        .post().uri("/emails")
+                        .header("Authorization", "Bearer " + resendKey)
+                        .body(Map.of("from", emailFrom, "to", List.of(email.trim()),
+                                "subject", "Reset your LUXE PERFUME password",
+                                "text", "Use this one-time link within 30 minutes: " + link))
+                        .retrieve().toBodilessEntity();
+            } catch (RuntimeException deliveryFailure) {
+                // Keep the public response identical and never log the one-time reset token.
+                log.error("Password reset email delivery failed; reset token was not logged.");
+            }
         }
     }
 
@@ -186,11 +194,11 @@ public class AuthService {
         if (newPassword.length() < 12 || newPassword.length() > 72)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be 12-72 characters");
         List<Map<String,Object>> rows = jdbc.queryForList(
-                "SELECT id,user_id,expires_at,used_at FROM password_reset_tokens WHERE token_hash=? FOR UPDATE",
+                "SELECT id,user_id,(expires_at > UTC_TIMESTAMP()) AS valid,used_at FROM password_reset_tokens WHERE token_hash=? FOR UPDATE",
                 sha256(token));
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token");
         Map<String,Object> row = rows.getFirst();
-        if (row.get("used_at") != null || !((LocalDateTime) row.get("expires_at")).isAfter(LocalDateTime.now()))
+        if (row.get("used_at") != null || !Boolean.TRUE.equals(row.get("valid")))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token");
         long userId = ((Number) row.get("user_id")).longValue();
         jdbc.update("UPDATE users SET password_hash=? WHERE id=?", passwordEncoder.encode(newPassword), userId);
