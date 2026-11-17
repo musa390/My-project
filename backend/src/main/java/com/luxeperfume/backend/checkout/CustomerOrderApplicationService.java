@@ -71,10 +71,10 @@ public class CustomerOrderApplicationService {
     public Map<String, Object> tracking(long customerId, String orderNumber) {
         Map<String, Object> order = ownedOrder(customerId, orderNumber);
         Map<String, Object> tracking = new LinkedHashMap<>();
-        tracking.put("orderNumber", order.get("order_number"));
-        tracking.put("currentStatus", order.get("order_status"));
-        tracking.put("placedAt", order.get("placed_at"));
-        tracking.put("updatedAt", order.get("updated_at"));
+        tracking.put("orderNumber", order.get("orderNumber"));
+        tracking.put("currentStatus", order.get("orderStatus"));
+        tracking.put("placedAt", order.get("placedAt"));
+        tracking.put("updatedAt", order.get("updatedAt"));
         tracking.put("events", statusHistory(number(order.get("id"))));
         return tracking;
     }
