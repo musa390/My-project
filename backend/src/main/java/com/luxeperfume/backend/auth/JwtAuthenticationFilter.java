@@ -43,9 +43,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     if (!active.isEmpty()) {
                         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                         jdbc.query("SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=?",
-                                rs -> authorities.add(new SimpleGrantedAuthority("ROLE_" + rs.getString(1))), userId);
+                                (org.springframework.jdbc.core.RowCallbackHandler) rs -> authorities.add(new SimpleGrantedAuthority("ROLE_" + rs.getString(1))), userId);
                         jdbc.query("SELECT DISTINCT p.code FROM user_roles ur JOIN role_permissions rp ON rp.role_id=ur.role_id JOIN permissions p ON p.id=rp.permission_id WHERE ur.user_id=?",
-                                rs -> authorities.add(new SimpleGrantedAuthority("PERM_" + rs.getString(1))), userId);
+                                (org.springframework.jdbc.core.RowCallbackHandler) rs -> authorities.add(new SimpleGrantedAuthority("PERM_" + rs.getString(1))), userId);
                         var authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
