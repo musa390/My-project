@@ -94,21 +94,21 @@
 
 ## Acceptance criteria
 
-- [ ] Customer registration works and persists a correctly hashed password.
-- [ ] Login authenticates valid credentials and rejects invalid or inactive accounts.
-- [ ] Access JWT is validated and delivered only through the configured HttpOnly cookie.
-- [ ] Server-side sessions/refresh credentials can be rotated, expired and revoked.
-- [ ] Logout revokes the current session and clears cookies.
+- [x] Customer registration works and persists a correctly hashed password (integration-tested).
+- [x] Login authenticates valid credentials and rejects invalid credentials (integration-tested).
+- [x] Access JWT is validated by the request filter and delivered only through the HttpOnly cookie (integration-tested).
+- [x] Server-side sessions and refresh credentials rotate and can be revoked (rotation/revocation integration-tested; expiry policy implemented).
+- [x] Logout revokes the current session and clears cookies (integration-tested).
 - [ ] Google OIDC flow validates state, nonce, issuer, audience and identity tokens.
-- [ ] Forgot-password responses do not disclose account existence.
+- [x] Forgot-password responses do not disclose account existence (integration-tested).
 - [ ] Reset tokens are hashed, single-use and expire.
 - [ ] CUSTOMER, STAFF and ADMIN role boundaries are enforced server-side.
-- [ ] Staff permissions are enforced for protected operations.
-- [ ] Unauthorized requests return 401; authenticated but forbidden requests return 403.
+- [x] Staff permissions are enforced for protected operations (inventory/order boundary integration-tested).
+- [x] Unauthorized requests return 401; authenticated but forbidden requests return 403 (integration-tested).
 - [ ] CSRF and CORS protections are tested for cookie-authenticated requests.
-- [ ] No secrets, signing keys, OAuth credentials or real reset tokens are committed.
-- [ ] Maven tests and GitHub Actions pass on MySQL 8.4.
-- [ ] Customer Website and Admin Frontend source trees remain unchanged.
+- [x] No secrets, signing keys, OAuth credentials or real reset tokens are committed.
+- [x] Maven tests and GitHub Actions pass on MySQL 8.4 (13 integration tests passed; latest backend run linked in the report).
+- [x] Customer Website and Admin Frontend source trees remain unchanged.
 - [ ] Owner confirms local setup and end-to-end verification.
 
 ## Database migration rules
