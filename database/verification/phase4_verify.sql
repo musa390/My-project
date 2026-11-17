@@ -1,6 +1,6 @@
 -- Run after applying V1 and V2.
 SELECT 'table_count' check_name, COUNT(*) actual_value, 29 expected_value, IF(COUNT(*)=29,'PASS','FAIL') result FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE';
-SELECT 'foreign_key_count' check_name, COUNT(*) actual_value, 32 expected_value, IF(COUNT(*)=32,'PASS','FAIL') result FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE();
+SELECT 'foreign_key_count' check_name, COUNT(*) actual_value, 35 expected_value, IF(COUNT(*)=35,'PASS','FAIL') result FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE();
 SELECT 'roles' check_name, COUNT(*) actual_value, IF(COUNT(*)>=4,'PASS','FAIL') result FROM roles;
 SELECT 'permissions' check_name, COUNT(*) actual_value, IF(COUNT(*)>=15,'PASS','FAIL') result FROM permissions;
 SELECT 'demo_products' check_name, COUNT(*) actual_value, IF(COUNT(*)=2,'PASS','FAIL') result FROM products WHERE slug IN ('demo-floral-eau-de-parfum','demo-woody-eau-de-parfum');
