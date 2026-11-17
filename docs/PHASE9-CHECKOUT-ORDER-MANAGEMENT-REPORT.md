@@ -112,7 +112,25 @@ All customer queries are scoped by the authenticated principal's user ID; an ord
 
 Added the `OrderCancellationPolicy` abstraction and `PreDispatchOrderCancellationPolicy` implementation. Added MySQL integration tests for customer ownership boundaries, history/detail/tracking, successful cancellation, exactly-once stock release and rejection of shipped orders.
 
-**Step 4 verification:** Code and tests are committed. GitHub Actions verification has not yet been confirmed; the Step 4 implementation is not marked CI-PASS until Java 21/MySQL 8.4 `mvn clean verify` succeeds.
+**Step 4 verification: PASS.** Step 4 is included in GitHub Actions run 44148435956 with Java 21 + MySQL 8.4: 45 total tests, 0 failures/errors/skips, Maven BUILD SUCCESS. The run also verifies Step 5.
+
+
+## Step 5 — Staff/Admin Order Management
+
+Implemented Staff/Admin APIs under `/api/v1/staff/orders`:
+- `GET /` — paginated list with order status, payment status and free-text filters across order number, customer email, recipient and phone.
+- `GET /{orderNumber}` — order snapshots, line items, payment records and status history.
+- `PATCH /{orderNumber}/status` — status transition with an optional staff note.
+
+The status lifecycle is explicitly constrained: PENDING → CONFIRMED/CANCELLED; CONFIRMED → PROCESSING/CANCELLED; PROCESSING → SHIPPED/CANCELLED; SHIPPED → DELIVERED. Backward/terminal transitions and unsupported RETURNED transitions are rejected.
+
+SecurityConfig now separates GET order routes (`PERM_orders.read`) from mutation routes (`PERM_orders.write`). The controller additionally requires ADMIN or MANAGER role and the matching permission; status mutation requires write permission. The actor ID comes from the authenticated principal.
+
+Staff cancellation is limited to pre-dispatch unpaid/failed orders. It locks the order and inventory rows, releases each reservation with a negative RELEASE ledger movement, updates the order status and writes the audit event in one transaction. Duplicate cancellation cannot release stock twice. Paid/pending-payment cancellations are rejected pending payment/refund handling.
+
+Added `OrderStatusTransitionPolicy` and `DefaultOrderStatusTransitionPolicy` for OOP abstraction/polymorphism. Added three MySQL integration tests for staff search/detail and full valid status progression with audit actor, exactly-once cancellation release, and read-only versus write permission separation.
+
+**Step 5 verification: PASS.** GitHub Actions run 44148435956 — Java 21 + MySQL 8.4, `mvn --batch-mode --no-transfer-progress clean verify`, **45 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**. This run includes the four Customer Order Management tests and three Staff Order Management tests. Flyway V1/V2/V3 were applied in the ephemeral CI database.
 
 ## Remaining Phase 9 scope
-Customer order history, detail/tracking and cancellation with exactly-once stock release; Staff/Admin order list/detail/status transitions and read/write permission separation; final API documentation, full regression/security review and owner-local clean-database verification.
+Customer and Staff/Admin order history/detail/tracking/status management and permission separation are implemented and CI-verified. Remaining Phase 9 scope: final API documentation, full regression/security review and owner-local clean-database verification.
