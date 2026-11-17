@@ -279,6 +279,13 @@ public class CatalogController {
     }
 
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/products/{id}/variants")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<List<Map<String,Object>>> staffProductVariants(@PathVariable long id) {
+        one("SELECT id FROM products WHERE id=? AND deleted_at IS NULL",id);
+        return ApiResponse.success("Staff product variants",jdbc.queryForList("SELECT v.*,i.quantity_on_hand,i.quantity_reserved,i.reorder_level FROM product_variants v LEFT JOIN inventory i ON i.variant_id=v.id WHERE v.product_id=? ORDER BY v.is_default DESC,v.id",id));
+    }
+
     @PostMapping("/api/v1/staff/catalog/products/{id}/variants")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> createVariant(@PathVariable long id,@RequestBody Map<String,Object> body) {
@@ -300,10 +307,16 @@ public class CatalogController {
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> updateVariant(@PathVariable long variantId,@RequestBody Map<String,Object> body) {
         Map<String,Object> v=one("SELECT * FROM product_variants WHERE id=?",variantId);
-        jdbc.update("UPDATE product_variants SET sku=?,variant_name=?,price=?,compare_at_price=?,is_default=?,is_active=? WHERE id=?",
+        Object options=body.get("optionValues");
+        if(options!=null && !(options instanceof String)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"optionValues must be a valid JSON string");
+        BigDecimal price=decimal(body,"price",String.valueOf(v.get("price")));
+        if(price.signum()<0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"price cannot be negative");
+        jdbc.update("UPDATE product_variants SET sku=?,variant_name=?,option_values=?,volume_ml=?,price=?,compare_at_price=?,cost_price=?,weight_grams=?,is_default=?,is_active=? WHERE id=?",
             text(body,"sku",String.valueOf(v.get("sku"))),text(body,"variantName",String.valueOf(v.get("variant_name"))),
-            decimal(body,"price",String.valueOf(v.get("price"))),body.getOrDefault("compareAtPrice",v.get("compare_at_price")),
-            bool(body,"isDefault",Boolean.TRUE.equals(v.get("is_default"))),bool(body,"isActive",Boolean.TRUE.equals(v.get("is_active"))),variantId);
+            options==null?v.get("option_values"):options,body.getOrDefault("volumeMl",v.get("volume_ml")),price,
+            body.getOrDefault("compareAtPrice",v.get("compare_at_price")),body.getOrDefault("costPrice",v.get("cost_price")),
+            body.getOrDefault("weightGrams",v.get("weight_grams")),bool(body,"isDefault",Boolean.TRUE.equals(v.get("is_default"))),
+            bool(body,"isActive",Boolean.TRUE.equals(v.get("is_active"))),variantId);
         return ApiResponse.success("Variant updated",one("SELECT * FROM product_variants WHERE id=?",variantId));
     }
     @Transactional
@@ -333,6 +346,13 @@ public class CatalogController {
     }
 
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/products/{id}/images")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<List<Map<String,Object>>> staffProductImages(@PathVariable long id) {
+        one("SELECT id FROM products WHERE id=? AND deleted_at IS NULL",id);
+        return ApiResponse.success("Staff product images",jdbc.queryForList("SELECT * FROM product_images WHERE product_id=? ORDER BY is_primary DESC,sort_order,id",id));
+    }
+
     @PostMapping("/api/v1/staff/catalog/products/{id}/images")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> addImage(@PathVariable long id,@RequestBody Map<String,Object> body) {
