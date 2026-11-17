@@ -137,7 +137,7 @@ class CatalogIntegrationTest {
         String name = "API Created Perfume " + UUID.randomUUID();
         MvcResult created = mockMvc.perform(post("/api/v1/staff/catalog/products").with(csrf()).cookie(access)
                 .contentType("application/json")
-                .content("{\"name\":\"" + name + "\",\"slug\":\"" + slug + "\",\"categoryId\":" + categoryId + ",\"productType\":\"VARIABLE\",\"status\":\"ACTIVE\"}"))
+                .content("{\"name\":\"" + name + "\",\"slug\":\"" + slug + "\",\"categoryId\":" + categoryId + ",\"productType\":\"VARIABLE\",\"status\":\"DRAFT\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.slug").value(slug)).andReturn();
         Long productId = jdbc.queryForObject("SELECT id FROM products WHERE slug=?",Long.class,slug);
@@ -152,6 +152,11 @@ class CatalogIntegrationTest {
                 .contentType("application/json")
                 .content("{\"imageUrl\":\"https://images.example.invalid/perfume.webp\",\"altText\":\"Test perfume\",\"primary\":true}"))
             .andExpect(status().isOk());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/staff/catalog/products/" + productId).with(csrf()).cookie(access)
+                .contentType("application/json").content("{\"status\":\"ACTIVE\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("ACTIVE"));
 
         mockMvc.perform(get("/api/v1/catalog/products/" + slug))
             .andExpect(status().isOk())
