@@ -5,33 +5,28 @@
 - Phase 1: Complete — 100%.
 - Phase 2: Complete — 100%.
 - Phase 3: Complete — 100%.
-- Phase 4: In progress — schema/migrations committed; local MySQL migration and verification pending.
-- Next after Phase 4 sign-off: Phase 5 — Spring Boot Backend Foundation.
+- Phase 4: Complete — 100%; MySQL 8.4 migrations, seed data and verification CI passed.
+- **Next: Phase 5 — Spring Boot Backend Foundation.**
 
 ## Sources of truth
 - docs/PROJECT_MASTER_PLAN.md
 - docs/PROJECT_STATUS.md
 - docs/DATABASE_DESIGN.md
+- docs/PHASE4-DATABASE-REPORT.md
 - database/README.md
 - docs/PHASE3-ADMIN-FRONTEND-REPORT.md
 
 ## Customer Website protection
 customer-frontend/ is the approved baseline. Do not change Customer Website source, UI, routes, styles or behavior without explicit approval. Phase 4 did not change customer-frontend or admin-frontend source.
 
-## Phase 4 deliverables
+## Phase 4 delivered
 - MySQL 8.4 target and existing Docker Compose service.
-- 30-table normalized relational schema in backend/src/main/resources/db/migration/V1__create_core_schema.sql.
-- RBAC permission catalog seeded by V1; no user/admin credential seeded.
-- Illustrative data in V2__insert_development_sample_data.sql.
-- ERD and design constraints in docs/DATABASE_DESIGN.md.
-- Apply/verify commands in database/README.md and SQL checks in database/verification/phase4_verify.sql.
+- 30-table normalized relational schema with 37 foreign keys and 38 CHECK constraints.
+- ERD, data integrity rules and documented migration policy.
+- V1 schema and V2 illustrative sample data migrations.
+- SQL verification queries and MySQL 8.4 GitHub Actions CI.
+- CI run 44094846967 passed: MySQL service healthy, V1 applied, V2 applied and verification step successful.
+- Local persistent database setup instructions: database/README.md.
 
-## Phase 4 remaining acceptance step
-1. In repository root, copy .env.example to .env and set local-only MySQL passwords.
-2. Start Docker Desktop, then run docker compose up -d mysql.
-3. Confirm docker compose ps reports the mysql service healthy.
-4. Apply V1 and V2 using the commands in database/README.md.
-5. Run database/verification/phase4_verify.sql.
-6. Share the complete output. Every check must PASS; resolve any failure before Phase 4 sign-off.
-
-Do not expose port 3306 publicly. Do not commit .env. Seed data is demo-only; no live payments or real accounts exist.
+## Phase 5 starting scope
+Initialize Java + Spring Boot + Maven backend, add Flyway and MySQL connectivity, configure environment-based secrets, health endpoint, OpenAPI and a clean layered package structure. Verify Flyway recognizes the existing V1/V2 migration history. Do not implement all business modules prematurely; follow the phase roadmap. Do not change Customer Website source without approval.
