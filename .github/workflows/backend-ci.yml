@@ -2,7 +2,7 @@ name: Backend Foundation CI
 
 on:
   push:
-    branches: [main, "phase5/**"]
+    branches: [main, "phase5/**", "phase6/**"]
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
