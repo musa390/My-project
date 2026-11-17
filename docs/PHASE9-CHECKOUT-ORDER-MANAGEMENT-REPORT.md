@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Progress Report
 
-**Status:** Steps 1–5 runtime implementation committed; final security regression review and latest branch-head GitHub Actions Maven CI PASS (47 tests, 0 failures/errors/skips). Owner-local clean-database verification remains pending.
+**Status:** Steps 1–5 implementation and security regression review PASS; GitHub Actions PASS (47 tests). Owner-local clean-database Maven verification and executable JAR startup PASS; final HTTP health/OpenAPI smoke checks remain pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 
@@ -145,3 +145,14 @@ Added `OrderStatusTransitionPolicy` and `DefaultOrderStatusTransitionPolicy` for
 
 ## Remaining Phase 9 scope
 **GitHub-side scope is complete:** Steps 1–5 implementation, regression/security fixes, documentation and latest CI verification all pass. The only outstanding acceptance check is owner-local clean-database verification on the user's Windows environment. This does not block the completed GitHub-side work, but Phase 9 should not be labelled 100% complete until the local check passes. Preserve the earlier failed local database and use a separate clean database.
+
+
+## Owner-local verification update — 18 November 2026
+
+- The owner completed local verification against the separate isolated MySQL 8.4 database `luxe_perfume_phase9_verify` on `127.0.0.1:3307`; the earlier database and Docker volume were preserved.
+- Local command: `mvn --batch-mode --no-transfer-progress clean verify`.
+- Result: **4 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**; executable JAR created.
+- The owner then launched `java -jar .\\target\\luxe-perfume-backend-0.1.0-SNAPSHOT.jar`.
+- Runtime startup log confirms Tomcat listening on port 8080, HikariCP connected to the isolated MySQL database, Flyway validated both migrations and reported schema version 2 up to date, Hibernate/JPA initialized, and Spring Boot reported the application started successfully.
+- Final HTTP smoke checks for `/actuator/health` and `/v3/api-docs` have not yet been returned; these remain the last acceptance checks before marking Phase 9 fully verified.
+- No destructive database operation was used. Phase 9 PR #6 remains open, draft and unmerged. Customer Website/Admin Website frontend source files and V1/V2/V3 migrations remain unchanged.
