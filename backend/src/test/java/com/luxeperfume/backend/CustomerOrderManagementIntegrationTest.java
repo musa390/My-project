@@ -103,7 +103,7 @@ class CustomerOrderManagementIntegrationTest {
     }
 
     @Test
-    void shippedOrPaidOrderCannotBeCustomerCancelled() throws Exception {
+    void shippedOrderCannotBeCustomerCancelled() throws Exception {
         Session customer = register("order-shipped");
         String orderNumber = placeOrder(customer, 1);
         long orderId = jdbc.queryForObject(
@@ -111,6 +111,30 @@ class CustomerOrderManagementIntegrationTest {
         long variantId = jdbc.queryForObject(
                 "SELECT variant_id FROM order_items WHERE order_id=?", Long.class, orderId);
         jdbc.update("UPDATE customer_orders SET order_status='SHIPPED' WHERE id=?", orderId);
+
+        mockMvc.perform(post("/api/v1/orders/" + orderNumber + "/cancel")
+                .with(csrf()).cookie(customer.access()).contentType("application/json")
+                .content("{}"))
+            .andExpect(status().isConflict());
+
+        assertThat(jdbc.queryForObject(
+                "SELECT quantity_reserved FROM inventory WHERE variant_id=?", Integer.class, variantId))
+                .isEqualTo(1);
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM inventory_movements
+                WHERE variant_id=? AND movement_type='RELEASE' AND reference_type='ORDER' AND reference_id=?
+                """, Integer.class, variantId, orderId)).isZero();
+    }
+
+    @Test
+    void paidOrderCannotBeCustomerCancelledBeforeRefundWorkflowExists() throws Exception {
+        Session customer = register("order-paid");
+        String orderNumber = placeOrder(customer, 1);
+        long orderId = jdbc.queryForObject(
+                "SELECT id FROM customer_orders WHERE order_number=?", Long.class, orderNumber);
+        long variantId = jdbc.queryForObject(
+                "SELECT variant_id FROM order_items WHERE order_id=?", Long.class, orderId);
+        jdbc.update("UPDATE customer_orders SET payment_status='PAID' WHERE id=?", orderId);
 
         mockMvc.perform(post("/api/v1/orders/" + orderNumber + "/cancel")
                 .with(csrf()).cookie(customer.access()).contentType("application/json")
