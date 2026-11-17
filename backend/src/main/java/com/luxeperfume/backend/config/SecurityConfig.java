@@ -46,6 +46,7 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/staff/catalog/products/**").hasAuthority("PERM_products.write")
+                .requestMatchers("/api/v1/staff/catalog/variants/*/inventory").hasAuthority("PERM_inventory.write")
                 .requestMatchers("/api/v1/staff/catalog/variants/**").hasAuthority("PERM_products.write")
                 .requestMatchers("/api/v1/staff/catalog/images/**").hasAuthority("PERM_products.write")
                 .requestMatchers("/api/v1/staff/catalog/cloudinary/**").hasAuthority("PERM_products.write")
