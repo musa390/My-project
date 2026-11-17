@@ -55,12 +55,12 @@ class CartWishlistInventoryIntegrationTest {
             .andExpect(jsonPath("$.data.subtotal").value(2500));
 
         jdbc.update("UPDATE product_variants SET price=1400 WHERE id=?", variantId);
-        mockMvc.perform(get("/api/v1/cart").cookie(customer.access()))
+        mockMvc.perform(get("/api/v1/cart").cookie(renewedAccess))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.items[0].currentUnitPrice").value(1400))
             .andExpect(jsonPath("$.data.subtotal").value(2800));
 
-        mockMvc.perform(post("/api/v1/cart/items").with(csrf()).cookie(customer.access())
+        mockMvc.perform(post("/api/v1/cart/items").with(csrf()).cookie(renewedAccess)
                 .contentType("application/json")
                 .content("{\"variantId\":" + variantId + ",\"quantity\":1}"))
             .andExpect(status().isOk())
@@ -70,13 +70,13 @@ class CartWishlistInventoryIntegrationTest {
         long itemId = jdbc.queryForObject(
                 "SELECT ci.id FROM cart_items ci JOIN carts c ON c.id=ci.cart_id WHERE c.user_id=? AND ci.variant_id=?",
                 Long.class, customer.userId(), variantId);
-        mockMvc.perform(put("/api/v1/cart/items/" + itemId).with(csrf()).cookie(customer.access())
+        mockMvc.perform(put("/api/v1/cart/items/" + itemId).with(csrf()).cookie(renewedAccess)
                 .contentType("application/json").content("{\"quantity\":4}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.items[0].quantity").value(4))
             .andExpect(jsonPath("$.data.subtotal").value(5600));
 
-        mockMvc.perform(delete("/api/v1/cart/items/" + itemId).with(csrf()).cookie(customer.access()))
+        mockMvc.perform(delete("/api/v1/cart/items/" + itemId).with(csrf()).cookie(renewedAccess))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.items.length()").value(0));
     }
