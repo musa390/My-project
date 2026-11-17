@@ -20,7 +20,7 @@ customer-frontend/ is the approved baseline. Do not change Customer Website sour
 
 ## Phase 4 deliverables
 - MySQL 8.4 target and existing Docker Compose service.
-- 29-table normalized relational schema in backend/src/main/resources/db/migration/V1__create_core_schema.sql.
+- 30-table normalized relational schema in backend/src/main/resources/db/migration/V1__create_core_schema.sql.
 - RBAC permission catalog seeded by V1; no user/admin credential seeded.
 - Illustrative data in V2__insert_development_sample_data.sql.
 - ERD and design constraints in docs/DATABASE_DESIGN.md.
