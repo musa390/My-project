@@ -46,7 +46,7 @@ public class JwtService {
     }
 
     public Claims parse(String token) {
-        return Jwts.parser().verifyWith(key).requireIssuer(issuer).build()
-                .requireAudience("luxe-perfume-client").parseSignedClaims(token).getPayload();
+        return Jwts.parser().verifyWith(key).requireIssuer(issuer).requireAudience("luxe-perfume-client")
+                .build().parseSignedClaims(token).getPayload();
     }
 }
