@@ -166,9 +166,9 @@ public class PaymentRefundService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Refund is not awaiting review");
         }
         jdbc.update("""
-                UPDATE payment_refunds SET refund_status='FAILED',reason=?,processed_at=CURRENT_TIMESTAMP
+                UPDATE payment_refunds SET refund_status='FAILED',processed_at=CURRENT_TIMESTAMP
                 WHERE id=?
-                """, rejectionReason, refundId);
+                """, refundId);
         jdbc.update("""
                 INSERT INTO payment_events
                     (payment_id,provider,event_type,event_idempotency_key,
