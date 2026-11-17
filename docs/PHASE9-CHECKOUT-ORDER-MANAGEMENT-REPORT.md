@@ -80,7 +80,7 @@ Implemented authenticated Customer endpoint `POST /api/v1/orders`.
 
 ### Runtime implementation
 - `OrderApplicationService` coordinates the entire order workflow in one Spring `@Transactional` method.
-- Locks the customer's ACTIVE cart, owned delivery address, cart lines, sellable variants and inventory rows.
+- Locks the customer's ACTIVE cart, owned delivery address, cart lines, sellable variants and inventory rows. Cart add/update/remove endpoints use the same parent-cart lock, preventing concurrent cart edits from racing with checkout.
 - Locks variants/inventory in ascending variant ID order; recalculates current prices and stock from MySQL rather than trusting checkout preview or browser totals.
 - Locks and revalidates coupon usage, dates, minimum spend and product/category scope before redemption.
 - Generates server-side order numbers using `OrderNumberGenerator` / `UuidOrderNumberGenerator`; the unique database key enforces uniqueness.
@@ -92,8 +92,8 @@ Implemented authenticated Customer endpoint `POST /api/v1/orders`.
 
 ### Step 3 — Maven verification: PASS
 
-- GitHub Actions: https://github.com/musa390/My-project/actions/runs/44144982747
-- Branch head: `785deca2657db07f944f5f659c56438a4eb233e6`.
+- GitHub Actions: https://github.com/musa390/My-project/actions/runs/44145457771
+- Branch head: `76b8876fe313ce0101c45ea9651a5ad05f7a0e67`.
 - Java 21 + MySQL 8.4; `mvn --batch-mode --no-transfer-progress clean verify`.
 - **38 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS.**
 - Order placement integration: 3 tests; checkout preview integration: 6; OOP pricing unit tests: 3.

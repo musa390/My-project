@@ -54,7 +54,7 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 - [ ] Implement customer history, detail, tracking and cancellation with stock release.
 - [ ] Implement Staff/Admin order list/detail/status transitions and permission checks.
 - [x] Add Step 2/3 unit and MySQL integration tests for checkout validation, order snapshots, coupon redemption, stock reservation, stock rejection, duplicate submissions and cart conversion. Customer cancellation and Staff/Admin status tests remain for later steps.
-- [x] Run MySQL 8.4 GitHub Actions `mvn clean verify` for Steps 2–3 — PASS, 38 tests, 0 failures, 0 errors, 0 skipped; Maven BUILD SUCCESS (workflow run 44144982747).
+- [x] Run MySQL 8.4 GitHub Actions `mvn clean verify` for Steps 2–3 — PASS, 38 tests, 0 failures, 0 errors, 0 skipped; Maven BUILD SUCCESS (workflow run 44145457771).
 - [ ] Update API/OpenAPI documentation for the remaining customer and staff order-management endpoints; Step 3 plan/report/project status updated.
 - [ ] Review diff to ensure Customer/Admin frontend source files and V1/V2/V3 are unchanged.
 - [ ] Owner-local clean-database verification remains an explicit environment acceptance step.
@@ -150,7 +150,7 @@ This verifies the Step 2 implementation in GitHub CI. Owner-local verification a
 **Request:** `{ "addressId": 123, "couponCode": "OPTIONAL-CODE", "customerNote": "Optional delivery note" }`. Client-supplied prices and totals are ignored.
 
 **Transaction flow:**
-1. Derive customer ID from the authenticated numeric principal; endpoint requires CUSTOMER role.
+1. Derive customer ID from the authenticated numeric principal; endpoint requires CUSTOMER role. Cart add/update/remove operations acquire the same ACTIVE-cart row lock before changing lines, so they serialize with checkout.
 2. Lock the customer's ACTIVE cart row with `SELECT ... FOR UPDATE`. A second submission cannot reuse a converted cart.
 3. Lock and verify the address belongs to the customer; read the active customer's email.
 4. Lock cart items, then lock product/variant and inventory rows in ascending variant ID order. Re-read product state, current DB price, on-hand and reserved quantities.
@@ -168,9 +168,9 @@ This verifies the Step 2 implementation in GitHub CI. Owner-local verification a
 
 ### Step 3 verification result
 
-<success>PASS</success> GitHub Actions workflow: https://github.com/musa390/My-project/actions/runs/44144982747
+<success>PASS</success> GitHub Actions workflow: https://github.com/musa390/My-project/actions/runs/44145457771
 
-- Branch head: `785deca2657db07f944f5f659c56438a4eb233e6`.
+- Branch head: `76b8876fe313ce0101c45ea9651a5ad05f7a0e67`.
 - Java 21 + MySQL 8.4.
 - Command: `mvn --batch-mode --no-transfer-progress clean verify`.
 - **38 tests, 0 failures, 0 errors, 0 skipped**; Maven **BUILD SUCCESS**.
