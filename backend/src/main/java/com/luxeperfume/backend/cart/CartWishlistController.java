@@ -69,7 +69,7 @@ public class CartWishlistController {
         long userId = userId(authentication);
         long cartId = getOrCreateCart(userId);
         List<Map<String,Object>> rows = jdbc.queryForList(
-                "SELECT ci.variant_id FROM cart_items ci JOIN carts c ON c.id=ci.cart_id WHERE ci.id=? AND ci.cart_id=? AND c.user_id=? AND c.cart_status='ACTIVE' FOR UPDATE",
+                "SELECT ci.variant_id FROM cart_items ci JOIN carts c ON c.id=ci.cart_id WHERE ci.id=? AND ci.cart_id=? AND c.user_id=? AND c.cart_status='ACTIVE'",
                 itemId, cartId, userId);
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found");
         long variantId = ((Number) rows.getFirst().get("variant_id")).longValue();
@@ -77,7 +77,8 @@ public class CartWishlistController {
         long available = lockAvailableStock(variantId);
         if (request.quantity() > available) throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Requested quantity exceeds available stock (" + available + ")");
-        jdbc.update("UPDATE cart_items SET quantity=? WHERE id=? AND cart_id=?", request.quantity(), itemId, cartId);
+        int changed = jdbc.update("UPDATE cart_items SET quantity=? WHERE id=? AND cart_id=?", request.quantity(), itemId, cartId);
+        if (changed == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found");
         return ApiResponse.success("Cart quantity updated", cartView(cartId));
     }
 
