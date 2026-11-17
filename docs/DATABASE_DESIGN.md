@@ -23,7 +23,7 @@ Migration authority: backend/src/main/resources/db/migration/ (Flyway-compatible
 | Catalogue | products, categories, brands, collections, collection_products | Product taxonomy and merchandising |
 | Product detail | product_images, product_variants | Gallery and sellable variants |
 | Shopping | carts, cart_items, wishlists, wishlist_items | Cart and saved products |
-| Orders | customer_orders, order_items | Order totals and immutable item snapshots |
+| Orders | customer_orders, order_items, order_status_history | Order totals, immutable item snapshots and status audit trail |
 | Payments | payments | Multiple payment attempts per order |
 | Stock | inventory, inventory_movements | Variant stock and audit ledger |
 | Promotions | coupons, coupon_products, coupon_categories, coupon_redemptions | Eligibility and redemption |
@@ -54,6 +54,8 @@ erDiagram
  PRODUCT_VARIANTS ||--o{ INVENTORY_MOVEMENTS : ledger
  USERS o|--o{ CUSTOMER_ORDERS : places
  CUSTOMER_ORDERS ||--|{ ORDER_ITEMS : contains
+ CUSTOMER_ORDERS ||--o{ ORDER_STATUS_HISTORY : status_events
+ USERS o|--o{ ORDER_STATUS_HISTORY : changed_by
  PRODUCT_VARIANTS o|--o{ ORDER_ITEMS : snapshot_source
  CUSTOMER_ORDERS ||--o{ PAYMENTS : payment_attempts
  COUPONS ||--o{ COUPON_REDEMPTIONS : redeemed
@@ -73,7 +75,9 @@ erDiagram
 - Products require a category and may optionally reference a brand. Products have images and variants.
 - Cart item quantity > 0; one variant appears once per cart. Wishlist composite key prevents duplicates.
 - Order grand total = subtotal - discount + shipping + tax; order line total = unit price * quantity - line discount.
-- Order item snapshots preserve name, variant, SKU and price; user FK may become NULL without deleting order history.
+- Order item snapshots preserve name, variant, SKU and price; customer email and shipping details are snapshotted; user FK may become NULL without deleting order history.
+- Order status transitions are append-only events in order_status_history, with an optional staff actor.
+- Generated unique keys enforce at most one default address per user, one primary image per product, one default variant per product and one active cart per user.
 - Payment callback must be verified server-side; never trust browser redirect to mark paid.
 - Reserved stock cannot exceed on-hand stock. All stock adjustments append inventory_movements transactionally.
 - Reviews are 1–5 and unique per user/product; moderation status is explicit. Backend must verify that an optional order item belongs to the same user and product before treating a review as verified.
