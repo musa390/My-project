@@ -4,6 +4,7 @@ import com.luxeperfume.backend.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -74,6 +75,7 @@ public class InventoryController {
     @Transactional
     public ApiResponse<Map<String,Object>> adjustStock(@PathVariable long variantId,
             @Valid @RequestBody StockAdjustmentRequest request) {
+        if (request.quantityChange() == 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantityChange cannot be zero");
         one("SELECT id FROM product_variants WHERE id=? FOR UPDATE", variantId);
         List<Map<String,Object>> rows = jdbc.queryForList(
                 "SELECT quantity_on_hand,quantity_reserved,reorder_level FROM inventory WHERE variant_id=? FOR UPDATE",
@@ -112,5 +114,5 @@ public class InventoryController {
         return rows.getFirst();
     }
 
-    public record StockAdjustmentRequest(@NotNull Integer quantityChange, @NotBlank String note) {}
+    public record StockAdjustmentRequest(@NotNull Integer quantityChange, @NotBlank @Size(max = 255) String note) {}
 }
