@@ -1,0 +1,62 @@
+name: Database Migration CI
+
+on:
+  push:
+    paths:
+      - "backend/src/main/resources/db/migration/**"
+      - "database/**"
+      - ".github/workflows/database-ci.yml"
+  pull_request:
+    paths:
+      - "backend/src/main/resources/db/migration/**"
+      - "database/**"
+      - ".github/workflows/database-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  mysql-migrations:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_password_only_for_ephemeral_runner
+          MYSQL_DATABASE: luxe_perfume
+          MYSQL_USER: luxe_app
+          MYSQL_PASSWORD: ci_app_password_only_for_ephemeral_runner
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_root_password_only_for_ephemeral_runner --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      MYSQL_ROOT_PASSWORD: ci_root_password_only_for_ephemeral_runner
+      MYSQL_DATABASE: luxe_perfume
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+      - name: Apply V1 schema migration
+        run: |
+          mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V1__create_core_schema.sql
+
+      - name: Apply V2 development seed migration
+        run: |
+          mysql --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V2__insert_development_sample_data.sql
+
+      - name: Verify schema, constraints and sample data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mysql --batch --raw --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < database/verification/phase4_verify.sql | tee phase4-verification-output.txt
+          if grep -q "FAIL" phase4-verification-output.txt; then
+            echo "One or more Phase 4 database assertions failed."
+            exit 1
+          fi
