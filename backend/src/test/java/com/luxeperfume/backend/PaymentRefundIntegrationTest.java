@@ -68,10 +68,6 @@ class PaymentRefundIntegrationTest {
             .andExpect(jsonPath("$.data.refundStatus").value("MANUAL_REVIEW"));
 
         Long secondRefundId = jdbc.queryForObject(
-                "SELECT id FROM payment_refunds WHERE payment_id=? AND amount=100.00",
-                Long.class, paymentId);
-        // The second request is 60.00; assert the final aggregate after reconciliation below.
-        secondRefundId = jdbc.queryForObject(
                 "SELECT id FROM payment_refunds WHERE payment_id=? AND amount=60.00",
                 Long.class, paymentId);
 
