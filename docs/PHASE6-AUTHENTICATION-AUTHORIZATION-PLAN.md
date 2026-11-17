@@ -1,0 +1,126 @@
+# Phase 6 — Authentication & Authorization
+
+**Status:** Implementation in progress — backend authentication APIs and initial security tests added  
+**Working branch:** `phase6/authentication-authorization`  
+**Base branch:** `phase5/backend-foundation`  
+**Scope:** Customer, Admin and Staff identity, authentication, sessions, permissions and protected API routes.
+
+## Goals
+
+1. Customer registration and login using email/password.
+2. Secure password hashing and credential validation.
+3. Short-lived signed JWT access credentials delivered only in Secure, HttpOnly cookies.
+4. Server-side session records with expiry, refresh/rotation, revocation and logout.
+5. Google OAuth 2.0 / OpenID Connect login with server-side token validation.
+6. Forgot-password and reset-password flow using single-use, expiring, hashed reset tokens.
+7. Role-based access control for CUSTOMER, STAFF and ADMIN, plus granular staff permissions.
+8. Protected API routes and consistent 401/403 responses.
+9. Security-focused automated tests and documentation.
+
+## Security architecture decisions
+
+- Use Spring Security for authentication, authorization, filter-chain configuration and method security.
+- Use a password encoder designed for password storage (prefer Argon2id where dependency/runtime support is verified; otherwise use BCrypt with an explicitly configured work factor). Never store plaintext passwords or reversible password encryption.
+- Use short-lived JWT access tokens in Secure, HttpOnly cookies. Do not store authentication tokens in localStorage or sessionStorage.
+- Keep server-side session state in the database. Store only a cryptographic hash of refresh/session secrets; rotate credentials and revoke sessions on logout, password reset and security-sensitive account changes.
+- Configure cookie attributes deliberately: HttpOnly, Secure in HTTPS environments, SameSite appropriate to the OAuth/deployment flow, narrow Path and expiry. Do not treat HttpOnly alone as CSRF protection.
+- Protect cookie-authenticated state-changing requests with CSRF defenses and strict CORS allowlists. Never use wildcard credentialed CORS.
+- Validate JWT signature, issuer, audience, expiry and token purpose. Use a managed signing key supplied through environment/secret management; never commit keys.
+- Use OAuth 2.0 Authorization Code flow with OpenID Connect, state and nonce validation, and PKCE where applicable. Validate identity tokens on the backend.
+- Do not automatically link accounts solely by an unverified email address.
+- Password-reset tokens are single-use, time-limited, stored hashed, and must not reveal whether an email address is registered.
+- Enforce authorization on the backend for every protected operation; frontend route guards are only a usability layer.
+- Keep authentication and authorization separate from business features planned for later phases.
+
+## Planned implementation sequence
+
+### 6.1 — Security baseline
+- Add compatible Spring Security and OAuth2/OIDC dependencies for the repository's Spring Boot version.
+- Define security configuration, authentication entry point, access-denied handling, CORS and CSRF policy.
+- Add security configuration tests before exposing protected endpoints.
+
+### 6.2 — Identity and password credentials
+- Add entities/repositories/services for customer identity and credentials, reusing the Phase 4 schema where it fits.
+- Review existing users, roles, permissions and user-role mappings before any schema change.
+- Implement registration, input validation, duplicate-account handling and password hashing.
+- Add login and account-status checks.
+
+### 6.3 — Session and JWT cookie lifecycle
+- Add a server-side session/refresh-token persistence model through a new Flyway V3 migration if needed; never rewrite V1/V2.
+- Issue short-lived access JWT cookies and rotate server-tracked refresh/session credentials.
+- Implement session listing/revocation as appropriate, logout and expiry.
+- Add CSRF protection for cookie-authenticated unsafe requests.
+
+### 6.4 — Google OIDC
+- Configure provider settings through environment variables.
+- Implement authorization-code/OIDC callback, state/nonce validation, identity verification and safe account linking.
+- Keep Google login disabled until real provider credentials and redirect URIs are configured by the repository owner.
+
+### 6.5 — Password recovery
+- Implement forgot-password request with uniform responses.
+- Implement single-use, expiring reset token storage and reset flow.
+- Revoke existing sessions after successful password reset.
+
+### 6.6 — Roles, permissions and route protection
+- Define CUSTOMER, STAFF and ADMIN role policy using the existing Phase 4 RBAC tables.
+- Add granular staff permission checks and method-level authorization.
+- Protect customer, staff and admin API route groups.
+- Ensure role assignment and privileged changes cannot be self-escalated by customers.
+
+### 6.7 — Verification and handoff
+- Add unit and integration tests for registration, login, hashing, cookies, JWT validation, session rotation/revocation, logout, OAuth validation, password reset, role boundaries, staff permissions, CSRF, CORS and protected routes.
+- Run Maven verification against MySQL 8.4 in CI.
+- Document local setup, environment variables, API contracts and owner-run verification.
+- Keep Customer Website and Admin Frontend source trees unchanged unless the owner explicitly authorizes frontend integration.
+
+## Implemented API contract (current branch)
+- `GET /api/v1/auth/csrf` — obtain the CSRF token before cookie-authenticated POST requests.
+- `POST /api/v1/auth/register` — create a CUSTOMER account and issue access/refresh cookies.
+- `POST /api/v1/auth/login` — authenticate a local account and issue cookies.
+- `POST /api/v1/auth/refresh` — rotate the refresh token and issue a new access token.
+- `POST /api/v1/auth/logout` — revoke the refresh session and clear both cookies.
+- `POST /api/v1/auth/forgot-password` — generic response; sends a single-use reset link when Resend is configured.
+- `POST /api/v1/auth/reset-password` — consume a valid reset token, change the password and revoke all sessions.
+- Google OIDC is opt-in via the `google` Spring profile and requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Register the exact callback URL `{BACKEND_BASE_URL}/login/oauth2/code/google` in Google Cloud Console.
+- Admin routes use ADMIN role; staff routes apply role and permission-specific rules.
+- Browser clients must first call the CSRF endpoint, retain the CSRF cookie and send its value in `X-XSRF-TOKEN` on unsafe requests. Cookies are HttpOnly; auth tokens must not be copied into browser storage.
+
+### Local provider setup
+1. Copy root `.env.example` to `.env`; never commit `.env`.
+2. Generate a unique JWT signing secret for the environment and set `JWT_SECRET_BASE64`; the checked-in fallback is development-only.
+3. For secure deployment set `AUTH_COOKIE_SECURE=true` and use HTTPS.
+4. Set `RESEND_API_KEY` and a verified `AUTH_EMAIL_FROM` to enable reset email delivery.
+5. For Google sign-in set `SPRING_PROFILES_ACTIVE=google`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_OAUTH_SUCCESS_REDIRECT`; configure the matching authorized redirect URI with Google.
+
+## Acceptance criteria
+
+- [x] Customer registration works and persists a correctly hashed password (integration-tested).
+- [x] Login authenticates valid credentials and rejects invalid credentials (integration-tested).
+- [x] Access JWT is validated by the request filter and delivered only through the HttpOnly cookie (integration-tested).
+- [x] Server-side sessions and refresh credentials rotate and can be revoked (rotation/revocation integration-tested; expiry policy implemented).
+- [x] Logout revokes the current session and clears cookies (integration-tested).
+- [ ] Google OIDC flow validates state, nonce, issuer, audience and identity tokens.
+- [x] Forgot-password responses do not disclose account existence (integration-tested).
+- [ ] Reset tokens are hashed, single-use and expire.
+- [ ] CUSTOMER, STAFF and ADMIN role boundaries are enforced server-side.
+- [x] Staff permissions are enforced for protected operations (inventory/order boundary integration-tested).
+- [x] Unauthorized requests return 401; authenticated but forbidden requests return 403 (integration-tested).
+- [ ] CSRF and CORS protections are tested for cookie-authenticated requests.
+- [x] No secrets, signing keys, OAuth credentials or real reset tokens are committed.
+- [x] Maven tests and GitHub Actions pass on MySQL 8.4 (13 integration tests passed; latest backend run linked in the report).
+- [x] Customer Website and Admin Frontend source trees remain unchanged.
+- [ ] Owner confirms local setup and end-to-end verification.
+
+## Database migration rules
+
+- Treat Phase 4 V1/V2 as immutable.
+- Add schema changes only through V3+ Flyway migrations.
+- Do not drop or repair a persistent database blindly.
+- Inspect current schema and Flyway history before applying any migration.
+- Do not seed a default production administrator or commit credentials.
+
+## Out of scope
+
+- Customer/Admin frontend integration unless explicitly approved.
+- Product, cart, inventory, checkout, order and payment workflows (later phases).
+- Production OAuth enablement until the owner configures provider credentials and approved callback URLs.

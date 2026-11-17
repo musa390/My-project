@@ -41,19 +41,32 @@ jobs:
       - name: Apply V1 schema migration
         shell: bash
         run: |
-          docker run --rm --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V1__create_core_schema.sql
+          docker run --rm -i --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V1__create_core_schema.sql
 
       - name: Apply V2 development seed migration
         shell: bash
         run: |
-          docker run --rm --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V2__insert_development_sample_data.sql
+          docker run --rm -i --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V2__insert_development_sample_data.sql
 
-      - name: Verify schema, constraints and sample data
+      - name: Verify Phase 4 schema, constraints and sample data
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --batch --raw --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < database/verification/phase4_verify.sql | tee phase4-verification-output.txt
+          docker run --rm -i --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --batch --raw --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < database/verification/phase4_verify.sql | tee phase4-verification-output.txt
           if grep -q "FAIL" phase4-verification-output.txt; then
             echo "One or more Phase 4 database assertions failed."
             exit 1
           fi
+
+      - name: Apply V3 authentication migration
+        shell: bash
+        run: |
+          docker run --rm -i --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V3__authentication_sessions_and_password_resets.sql
+
+      - name: Verify Phase 6 authentication tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf "%s\\n" "SHOW TABLES LIKE 'auth_sessions';" "SHOW TABLES LIKE 'password_reset_tokens';" | docker run --rm -i --network host --entrypoint mysql mysql:8.4 --batch --skip-column-names --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | tee phase6-auth-tables.txt
+          grep -qx "auth_sessions" phase6-auth-tables.txt
+          grep -qx "password_reset_tokens" phase6-auth-tables.txt

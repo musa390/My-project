@@ -6,9 +6,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.servlet.http.Cookie;
+import org.springframework.test.web.servlet.MvcResult;
+import java.util.UUID;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.hamcrest.Matchers.containsString;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,6 +28,9 @@ class BackendFoundationIntegrationTest {
 
     @Autowired
     private Flyway flyway;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     void healthEndpointReturnsUp() throws Exception {
@@ -46,7 +57,125 @@ class BackendFoundationIntegrationTest {
     }
 
     @Test
+    void businessApiRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/private-test"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminAndStaffRoutesRejectAnonymousRequests() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/security"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/staff/inventory"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void csrfBootstrapIsAvailable() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void registrationHashesPasswordAndSetsHttpOnlyCookies() throws Exception {
+        String email = "phase6-" + UUID.randomUUID() + "@example.invalid";
+        mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Test\",\"lastName\":\"Customer\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", containsString("lp_access=")))
+                .andExpect(header().string("Set-Cookie", containsString("HttpOnly")));
+        String hash = jdbc.queryForObject("SELECT password_hash FROM users WHERE email=?", String.class, email);
+        assertThat(hash).isNotNull().startsWith("$2");
+        assertThat(hash).isNotEqualTo("StrongPassphrase123!");
+    }
+
+    @Test
+    void loginRejectsWrongPasswordAndAcceptsValidCredentials() throws Exception {
+        String email = "login-" + UUID.randomUUID() + "@example.invalid";
+        mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Login\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/auth/login").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"WrongPassphrase123!\"}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/login").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", containsString("lp_access=")));
+    }
+
+    @Test
+    void customerAndStaffPermissionBoundariesAreEnforced() throws Exception {
+        String email = "rbac-" + UUID.randomUUID() + "@example.invalid";
+        MvcResult registration = mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"RBAC\"}"))
+                .andExpect(status().isOk()).andReturn();
+        Cookie access = registration.getResponse().getCookie("lp_access");
+        Long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long.class, email);
+        mockMvc.perform(get("/api/v1/admin/secure-test").cookie(access))
+                .andExpect(status().isForbidden());
+
+        jdbc.update("DELETE FROM user_roles WHERE user_id=?", userId);
+        jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='INVENTORY_STAFF'", userId);
+        mockMvc.perform(get("/api/v1/staff/orders/secure-test").cookie(access))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/staff/inventory/secure-test").cookie(access))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void refreshRotatesTokenAndLogoutRevokesSession() throws Exception {
+        String email = "session-" + UUID.randomUUID() + "@example.invalid";
+        MvcResult registration = mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Session\"}"))
+                .andExpect(status().isOk()).andReturn();
+        Cookie initialRefresh = registration.getResponse().getCookie("lp_refresh");
+        assertThat(initialRefresh).isNotNull();
+        assertThat(registration.getResponse().getCookie("lp_access").isHttpOnly()).isTrue();
+
+        MvcResult refreshed = mockMvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(initialRefresh))
+                .andExpect(status().isOk()).andReturn();
+        Cookie rotatedRefresh = refreshed.getResponse().getCookie("lp_refresh");
+        assertThat(rotatedRefresh).isNotNull();
+        assertThat(rotatedRefresh.getValue()).isNotEqualTo(initialRefresh.getValue());
+
+        mockMvc.perform(post("/api/v1/auth/logout").with(csrf()).cookie(rotatedRefresh))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(rotatedRefresh))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void forgotPasswordUsesSamePublicResponseForKnownAndUnknownEmails() throws Exception {
+        String email = "reset-" + UUID.randomUUID() + "@example.invalid";
+        mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Reset\"}"))
+                .andExpect(status().isOk());
+        String known = mockMvc.perform(post("/api/v1/auth/forgot-password").with(csrf())
+                        .contentType("application/json").content("{\"email\":\"" + email + "\"}"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        String unknown = mockMvc.perform(post("/api/v1/auth/forgot-password").with(csrf())
+                        .contentType("application/json").content("{\"email\":\"unknown-" + UUID.randomUUID() + "@example.invalid\"}"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        assertThat(known).isEqualTo(unknown);
+    }
+
+    @Test
+    void unsafeCookieRequestsRequireCsrfProtection() throws Exception {
+        mockMvc.perform(post("/api/v1/private-test"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void existingPhaseFourMigrationsAreApplied() {
-        assertThat(flyway.info().applied()).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(flyway.info().applied()).hasSizeGreaterThanOrEqualTo(3);
     }
 }
