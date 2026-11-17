@@ -9,8 +9,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.UUID;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.hamcrest.Matchers.containsString;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -82,8 +82,8 @@ class BackendFoundationIntegrationTest {
                         .contentType("application/json")
                         .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Test\",\"lastName\":\"Customer\"}"))
                 .andExpect(status().isOk())
-                .andExpect(header().stringValues("Set-Cookie",
-                        org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("lp_access="))));
+                .andExpect(header().string("Set-Cookie", containsString("lp_access=")))
+                .andExpect(header().string("Set-Cookie", containsString("HttpOnly")));
         String hash = jdbc.queryForObject("SELECT password_hash FROM users WHERE email=?", String.class, email);
         assertThat(hash).isNotNull().startsWith("$2");
         assertThat(hash).isNotEqualTo("StrongPassphrase123!");
