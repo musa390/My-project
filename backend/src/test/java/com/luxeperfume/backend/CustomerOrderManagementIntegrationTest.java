@@ -44,7 +44,7 @@ class CustomerOrderManagementIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.orderNumber").value(orderNumber))
             .andExpect(jsonPath("$.data.items.length()").value(1))
-            .andExpect(jsonPath("$.data.statusHistory[0].to_status").value("PENDING"));
+            .andExpect(jsonPath("$.data.statusHistory[0].toStatus").value("PENDING"));
 
         mockMvc.perform(get("/api/v1/orders/" + orderNumber).cookie(other.access()))
             .andExpect(status().isNotFound());
@@ -85,7 +85,7 @@ class CustomerOrderManagementIntegrationTest {
                 """, Integer.class, variantId, orderId)).isEqualTo(1);
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM order_status_history
-                WHERE order_id=? AND from_status='PENDING' AND to_status='CANCELLED'
+                WHERE order_id=? AND from_status='PENDING' AND toStatus='CANCELLED'
                 """, Integer.class, orderId)).isEqualTo(1);
 
         mockMvc.perform(post("/api/v1/orders/" + orderNumber + "/cancel")
