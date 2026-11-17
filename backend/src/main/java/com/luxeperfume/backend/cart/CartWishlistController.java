@@ -43,6 +43,7 @@ public class CartWishlistController {
             @Valid @RequestBody CartItemRequest request) {
         long userId = userId(authentication);
         long cartId = getOrCreateCart(userId);
+        lockActiveCart(cartId, userId);
         Map<String,Object> variant = lockSellableVariant(request.variantId());
         long available = lockAvailableStock(request.variantId());
         List<Map<String,Object>> existing = jdbc.queryForList(
@@ -68,6 +69,7 @@ public class CartWishlistController {
             @PathVariable long itemId, @Valid @RequestBody QuantityRequest request) {
         long userId = userId(authentication);
         long cartId = getOrCreateCart(userId);
+        lockActiveCart(cartId, userId);
         List<Map<String,Object>> rows = jdbc.queryForList(
                 "SELECT ci.variant_id FROM cart_items ci JOIN carts c ON c.id=ci.cart_id WHERE ci.id=? AND ci.cart_id=? AND c.user_id=? AND c.cart_status='ACTIVE'",
                 itemId, cartId, userId);
@@ -87,6 +89,7 @@ public class CartWishlistController {
     public ApiResponse<Map<String,Object>> removeCartItem(Authentication authentication, @PathVariable long itemId) {
         long userId = userId(authentication);
         long cartId = getOrCreateCart(userId);
+        lockActiveCart(cartId, userId);
         int changed = jdbc.update("DELETE FROM cart_items WHERE id=? AND cart_id=?", itemId, cartId);
         if (changed == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart item not found");
         return ApiResponse.success("Cart item removed", cartView(cartId));
@@ -205,6 +208,17 @@ public class CartWishlistController {
         long onHand = ((Number) rows.getFirst().get("quantity_on_hand")).longValue();
         long reserved = ((Number) rows.getFirst().get("quantity_reserved")).longValue();
         return Math.max(0, onHand - reserved);
+    }
+
+    private void lockActiveCart(long cartId, long userId) {
+        List<Long> locked = jdbc.query("""
+                SELECT id FROM carts
+                WHERE id=? AND user_id=? AND cart_status='ACTIVE'
+                FOR UPDATE
+                """, (rs, row) -> rs.getLong(1), cartId, userId);
+        if (locked.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cart is no longer active");
+        }
     }
 
     private long getOrCreateCart(long userId) {
