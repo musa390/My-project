@@ -36,7 +36,7 @@ class CheckoutPreviewIntegrationTest {
                 .contentType("application/json")
                 .content("""
                         {"addressId": %d, "couponCode": "%s", "subtotal": 1, "discountTotal": 99999, "shippingTotal": 99999, "grandTotal": 1}
-                        """.formatted(addressId, couponCode))
+                        """.formatted(addressId, couponCode)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(2400))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(150))
@@ -60,7 +60,7 @@ class CheckoutPreviewIntegrationTest {
                 .contentType("application/json")
                 .content("""
                         {"addressId": %d, "couponCode": "%s"}
-                        """.formatted(addressId, couponCode))
+                        """.formatted(addressId, couponCode)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(1400))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(250))
@@ -105,7 +105,7 @@ class CheckoutPreviewIntegrationTest {
                 .contentType("application/json")
                 .content("""
                         {"addressId": %d, "couponCode": "%s"}
-                        """.formatted(addressId, couponCode))
+                        """.formatted(addressId, couponCode)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(1500))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(100))
@@ -126,7 +126,7 @@ class CheckoutPreviewIntegrationTest {
                 .contentType("application/json")
                 .content("""
                         {"addressId": %d, "couponCode": "%s"}
-                        """.formatted(addressId, couponCode))
+                        """.formatted(addressId, couponCode)))
             .andExpect(status().isUnprocessableEntity());
     }
 
@@ -142,7 +142,7 @@ class CheckoutPreviewIntegrationTest {
                 .contentType("application/json")
                 .content("""
                         {"addressId": %d, "couponCode": "%s"}
-                        """.formatted(addressId, couponCode))
+                        """.formatted(addressId, couponCode)))
             .andExpect(status().isUnprocessableEntity());
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf())
