@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Plan
 
-**Status:** Steps 1–3 implemented; Step 3 GitHub Maven CI PASS. Customer history/detail/cancellation and Staff/Admin order management remain pending.
+**Status:** Steps 1–4 runtime implementation committed; Step 3 GitHub Maven CI PASS. Step 4 automated CI verification is pending. Staff/Admin order management remains pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 **Dependency:** Phase 8 persistent cart, catalog pricing, inventory and authentication APIs.
@@ -51,13 +51,36 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 - [x] Inspect existing address, cart, coupon, order, order-item, coupon-redemption and inventory schema plus auth principal conventions.
 - [x] Add DTO validation and server-side checkout quote/pricing/shipping/coupon services; Step 2 Maven CI PASS.
 - [x] Implement transactional order creation, stock reservation, coupon redemption, order snapshots and cart conversion; Step 3 Maven CI PASS.
-- [ ] Implement customer history, detail, tracking and cancellation with stock release.
+- [x] Implement customer history, detail, tracking and cancellation with transactional stock release.
 - [ ] Implement Staff/Admin order list/detail/status transitions and permission checks.
-- [x] Add Step 2/3 unit and MySQL integration tests for checkout validation, order snapshots, coupon redemption, stock reservation, stock rejection, duplicate submissions and cart conversion. Customer cancellation and Staff/Admin status tests remain for later steps.
+- [x] Add Step 2/3 unit and MySQL integration tests for checkout validation, order snapshots, coupon redemption, stock reservation, stock rejection, duplicate submissions and cart conversion.
+- [x] Add Step 4 MySQL integration tests for customer-owned history/detail/tracking, foreign-order isolation, eligible cancellation, exactly-once stock release and shipped-order rejection. Latest Step 4 CI result is pending.
 - [x] Run MySQL 8.4 GitHub Actions `mvn clean verify` for Steps 2–3 — PASS, 38 tests, 0 failures, 0 errors, 0 skipped; Maven BUILD SUCCESS (workflow run 44145457771).
 - [ ] Update API/OpenAPI documentation for the remaining customer and staff order-management endpoints; Step 3 plan/report/project status updated.
 - [ ] Review diff to ensure Customer/Admin frontend source files and V1/V2/V3 are unchanged.
 - [ ] Owner-local clean-database verification remains an explicit environment acceptance step.
+
+## Step 4 — Customer Order Management
+
+**Runtime endpoints:**
+- `GET /api/v1/orders?page=0&size=10` — paginated history, always scoped to the authenticated customer.
+- `GET /api/v1/orders/{orderNumber}` — order totals, immutable item/address snapshots and status history.
+- `GET /api/v1/orders/{orderNumber}/tracking` — current status and ordered status events.
+- `POST /api/v1/orders/{orderNumber}/cancel` — customer cancellation with an optional reason.
+
+**Security and business rules:**
+- Customer ID is derived from the authenticated numeric principal. Every history/detail/tracking/cancel query includes `user_id=?`; another customer's order returns NOT_FOUND.
+- Cancellation is allowed only for PENDING, CONFIRMED or PROCESSING orders whose payment status is UNPAID or FAILED. SHIPPED/DELIVERED/terminal orders and payment states requiring payment-provider handling are rejected. Payment/refund integration remains Phase 10.
+- The cancellation policy is represented by `OrderCancellationPolicy` and `PreDispatchOrderCancellationPolicy`, keeping the rule out of the controller.
+- Cancellation locks the owned order row first, then order items and inventory rows in ascending variant ID order. It decrements `quantity_reserved` using a guarded update, inserts a negative-quantity RELEASE movement referencing the order, changes order status to CANCELLED and appends order_status_history in one transaction.
+- The locked order status is the idempotency gate: a second cancellation sees CANCELLED and fails before releasing stock. Any inconsistency rolls back all cancellation writes.
+- No payment status is changed and no refund is attempted.
+
+**Java OOP:** interface-based cancellation policy abstraction/polymorphism; existing encapsulated domain/pricing model and abstract coupon strategy remain in use.
+
+**Tests added:** MySQL-backed tests cover own-vs-other customer visibility, history/detail/tracking, cancellation release ledger and reserved balance, duplicate cancellation, and shipped-order rejection.
+
+**Verification:** Runtime code and tests have been committed to the Phase 9 branch. Step 4 GitHub Actions result has not yet been confirmed; do not treat Step 4 as CI-verified until a successful Java 21/MySQL 8.4 `mvn clean verify` run is available.
 
 ## Out of scope
 - Real payment gateway integration or marking an order PAID from a browser callback (Phase 10).
