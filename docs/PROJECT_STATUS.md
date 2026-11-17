@@ -16,7 +16,7 @@ See the respective phase reports and commit history in this repository. Phase 3 
 - Design: ./DATABASE_DESIGN.md
 - MySQL target: 8.4, InnoDB, utf8mb4; database name luxe_perfume.
 - Added 29 tables covering users/RBAC, addresses, catalogue, product images/variants, carts/wishlists, orders/items, payments, inventory/ledger, coupons/redemptions, reviews, banners and newsletter.
-- Added 32 foreign-key relationships, unique keys, indexes and CHECK constraints.
+- Added 35 foreign-key relationships, unique keys, indexes and CHECK constraints.
 - Added Flyway-compatible V1 schema and V2 illustrative sample-data migrations under backend/src/main/resources/db/migration/.
 - Added MySQL Docker Compose setup instructions and SQL verification queries under database/.
 - No default admin password, real customer data or real payment data is seeded.
