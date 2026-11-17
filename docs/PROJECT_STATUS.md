@@ -12,7 +12,7 @@
 - Phase 6 — **Implementation and automated CI verified; live provider and owner-local verification pending.** Backend CI run 44127586809 passed 13 integration tests (0 failures/errors); Database CI run 44127587025 applied V1/V2/V3 and verified the authentication tables. Google OIDC live callback, Resend email delivery, production secrets/HTTPS/CORS configuration, owner-local end-to-end verification and final security review remain pending. Phase 6 is not 100% complete and its PR #1 remains draft/unmerged.
 - Phase 7 — **100% implementation complete; automated CI PASS.** Working branch: `phase7/product-catalog-backend`; draft PR #4 remains open and unmerged. Implemented public catalog APIs, permission-protected Staff CRUD, variants, images, inventory, search/filter/sort/pagination, availability, merchandising endpoints and optional signed Cloudinary upload. Latest CI run 44132093917: MySQL 8.4, 21 tests, 0 failures/errors, Maven BUILD SUCCESS. Owner-local clean-DB verification and live Cloudinary account upload remain environment checks. No Customer/Admin frontend source changed.
 - Phase 8 — **In progress; initial backend implementation and CI verification PASS; not 100%.** Branch: `phase8/cart-wishlist-inventory`; draft PR #5 is open and unmerged. Persistent Customer cart/wishlist APIs, server-side price recalculation, stock validation, inventory movement audit, stock adjustment and low-stock APIs implemented. CI run 44134986481: MySQL 8.4, V1/V2/V3 applied, 26 tests, 0 failures/errors, Maven BUILD SUCCESS. Final review and owner-local clean-DB verification remain pending.
-- Phase 9 — **Step 1 audit complete; Step 2 Checkout Validation & Pricing Engine implementation + Maven CI PASS.** Authenticated `POST /api/v1/checkout/preview` uses server-side cart prices, address ownership, stock/coupon validation, BigDecimal pricing and Java OOP strategy/policy interfaces. GitHub Actions run 44143372079: Java 21 + MySQL 8.4, `mvn clean verify`, 35 tests, 0 failures/errors/skips, BUILD SUCCESS. Owner-local clean-DB verification remains pending. Branch: `phase9/checkout-order-management`, based on Phase 8; Draft PR #6 remains open/unmerged. Audited the existing address, cart, coupon/redemption, order/item/status-history, inventory/movement schema and numeric authenticated-user principal. Existing V1 schema supports the planned workflow; no V4 migration is currently justified. A security gap was identified: staff order GET routes currently require `orders.write`; Phase 9 must separate `orders.read` from `orders.write`. Shipping/tax policy also needs explicit server-side configuration. Customer/Admin frontend source and V1/V2/V3 remain unchanged.
+- Phase 9 — **Steps 1–3 implemented; Step 3 Maven CI PASS.** Step 2 adds authenticated `POST /api/v1/checkout/preview`; Step 3 adds authenticated Customer `POST /api/v1/orders` with transactional order snapshots, unique server-side order number, coupon redemption, atomic inventory reservation/movement ledger and cart conversion. GitHub Actions run 44144982747: Java 21 + MySQL 8.4, `mvn clean verify`, 38 tests, 0 failures/errors/skips, BUILD SUCCESS. Owner-local clean-DB verification remains pending. Branch: `phase9/checkout-order-management`, based on Phase 8; Draft PR #6 remains open/unmerged. Customer order history/detail/tracking/cancellation and Staff/Admin order management remain pending. Customer/Admin frontend source and V1/V2/V3 remain unchanged.
 
 ## Phase 4 — Database Design
 - MySQL 8.4, InnoDB, utf8mb4; database `luxe_perfume`.
@@ -45,11 +45,14 @@
 
 ## Phase 9 — Checkout & Order Management
 - Working branch: `phase9/checkout-order-management`; base: `phase8/cart-wishlist-inventory`.
+- Draft PR #6: https://github.com/musa390/My-project/pull/6 (open, draft, unmerged).
 - Plan: `PHASE9-CHECKOUT-ORDER-MANAGEMENT-PLAN.md`; report: `PHASE9-CHECKOUT-ORDER-MANAGEMENT-REPORT.md`.
-- Planned customer APIs: checkout preview, order creation, order history, order detail/tracking and permitted cancellation.
-- Planned Staff/Admin APIs: order list/detail and validated status transitions with audit history.
-- Core rules: backend-only price/coupon/shipping/tax calculations; address ownership and snapshots; atomic inventory reservation; coupon redemption locking/limits; transactional order creation; cancellation stock release; customer data isolation.
-- Java 21 OOP is required in Phase 9: Encapsulation in domain objects, Inheritance for shared strategy behavior, Abstraction through policy/service interfaces, and Polymorphism through coupon/shipping strategies. Architecture is documented in `PHASE9-JAVA-OOP-ARCHITECTURE.md`. Runtime implementation and integration tests are pending. No payment gateway work (Phase 10) or frontend source changes are included.
+- Step 1: existing schema/auth/pricing/inventory audit complete; no V4 migration currently justified.
+- Step 2: authenticated checkout preview with server-side current prices, address ownership, coupon validation, BigDecimal totals and Java OOP pricing policies.
+- Step 3: authenticated Customer order placement; transactional order and item snapshots, unique server-generated order number, coupon redemption, inventory row locks/reservations, RESERVATION ledger entries, initial status history and cart conversion.
+- Latest CI run 44144982747: Java 21 + MySQL 8.4, 38 tests, 0 failures/errors/skips, Maven BUILD SUCCESS. Step 3 tests cover successful order persistence/reservation/redemption, insufficient-stock rejection without mutation and duplicate submission prevention.
+- Remaining: customer history/detail/tracking/cancellation and exactly-once stock release; Staff/Admin order list/detail/status transitions; permission separation for order read/write; final regression/security review and owner-local clean-database verification.
+- Shipping/tax are server-side configurable policies; development defaults are explicitly zero. No payment gateway work (Phase 10) or Customer/Admin frontend source changes are included. V1/V2/V3 remain unchanged.
 
 ## Roadmap
 | Phase | Scope | Status |
@@ -63,7 +66,7 @@
 | 6 | Authentication & Authorization | CI passed; live provider/local verification pending |
 | 7 | Product & Catalog Backend | 100% implementation + CI; owner environment checks pending |
 | 8 | Cart, Wishlist & Inventory | In progress; final review/local verification pending |
-| 9 | Checkout & Order Management | **Step 1 complete; Step 2 implementation + CI PASS; Step 3 pending** |
+| 9 | Checkout & Order Management | **Steps 1–3 implementation + CI PASS; customer/staff management pending** |
 | 10 | Payment Integration | Pending |
 | 11 | Advanced Business Logic & OOP | Pending |
 | 12 | Additional Integrations | Pending |
