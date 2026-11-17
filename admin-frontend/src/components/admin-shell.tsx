@@ -2,24 +2,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Activity, BadgePercent, BarChart3, Bell, Boxes, ChevronDown, ClipboardList, FolderOpen, Gauge, Gem, Image, LayoutDashboard, Mail, Menu, Package, Settings, ShieldCheck, ShoppingBag, Star, Tags, Users, Wallet, X } from "lucide-react";
-
-const nav = [
+import { Activity, BadgePercent, BarChart3, Bell, Boxes, ChevronDown, FolderOpen, Gauge, Gem, Image, Mail, Menu, Package, Settings, ShieldCheck, ShoppingBag, Star, Tags, Users, Wallet, X, type LucideIcon } from "lucide-react";
+const nav: { group: string; items: [string, string, LucideIcon][] }[] = [
  {group:"WORKSPACE",items:[["Overview","/",Gauge],["Products","/products",Package],["Categories","/categories",Tags],["Brands","/brands",Gem],["Collections","/collections",FolderOpen]]},
  {group:"COMMERCE",items:[["Orders","/orders",ShoppingBag],["Customers","/customers",Users],["Inventory","/inventory",Boxes],["Payments","/payments",Wallet],["Coupons & Discounts","/coupons",BadgePercent]]},
  {group:"ENGAGEMENT",items:[["Reviews","/reviews",Star],["Banners","/banners",Image],["Newsletter","/newsletter",Mail],["Analytics","/analytics",BarChart3]]},
  {group:"ADMINISTRATION",items:[["Staff & Roles","/staff",ShieldCheck],["Settings","/settings",Settings]]}
-] as const;
+];
 export default function AdminShell({children,title,description,active}:{children:React.ReactNode;title:string;description:string;active:string}) {
  const [open,setOpen]=useState(false); const pathname=usePathname();
- return <div className="admin-app">
-  <aside className={"sidebar "+(open?"sidebar-open":"")}><div className="side-brand"><span className="brand-symbol">L</span><div><b>LUXE</b><small>PERFUME ADMIN</small></div><button className="mobile-close" onClick={()=>setOpen(false)} aria-label="Close menu"><X size={19}/></button></div>
-   <nav aria-label="Admin navigation">{nav.map(group=><div className="nav-group" key={group.group}><small>{group.group}</small>{group.items.map(([label,href,Icon])=><Link onClick={()=>setOpen(false)} className={(pathname===href||(href!=="/"&&pathname.startsWith(href)))?"nav-item selected":"nav-item"} href={href} key={href}><Icon size={17}/><span>{label}</span></Link>)}</div>)}</nav>
-   <div className="sidebar-bottom"><div className="help-card"><ShieldCheck size={18}/><b>Workspace security</b><span>Demo mode · API disconnected</span></div><div className="profile-mini"><div className="avatar">AD</div><div><b>Store Admin</b><small>Administrator</small></div><ChevronDown size={15}/></div></div>
-  </aside>
-  {open&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setOpen(false)}/>}
-  <main className="admin-main"><header className="topbar"><button className="menu-trigger" onClick={()=>setOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><div className="crumb">Workspace <span>/</span> <b>{active}</b></div><div className="top-actions"><span className="demo-pill">DEMO MODE</span><button aria-label="Notifications" className="notification"><Bell size={18}/><i/></button><div className="top-avatar">AD</div></div></header>
-   <div className="page-content"><div className="page-title"><div><span className="eyebrow">LUXE PERFUME / ADMIN</span><h1>{title}</h1><p>{description}</p></div><div className="page-date">17 NOV 2026</div></div>{children}</div>
-  </main>
- </div>;
+ return <div className="admin-app"><aside className={"sidebar "+(open?"sidebar-open":"")}><div className="side-brand"><span className="brand-symbol">L</span><div><b>LUXE</b><small>PERFUME ADMIN</small></div><button className="mobile-close" onClick={()=>setOpen(false)} aria-label="Close menu"><X size={19}/></button></div><nav aria-label="Admin navigation">{nav.map(group=><div className="nav-group" key={group.group}><small>{group.group}</small>{group.items.map(([label,href,Icon])=><Link onClick={()=>setOpen(false)} className={(pathname===href||(href!=="/"&&pathname.startsWith(href)))?"nav-item selected":"nav-item"} href={href} key={href}><Icon size={17}/><span>{label}</span></Link>)}</div>)}</nav><div className="sidebar-bottom"><div className="help-card"><ShieldCheck size={18}/><b>Workspace security</b><span>Demo mode · API disconnected</span></div><div className="profile-mini"><div className="avatar">AD</div><div><b>Store Admin</b><small>Administrator</small></div><ChevronDown size={15}/></div></div></aside>{open&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setOpen(false)}/>}<main className="admin-main"><header className="topbar"><button className="menu-trigger" onClick={()=>setOpen(true)} aria-label="Open navigation"><Menu size={20}/></button><div className="crumb">Workspace <span>/</span> <b>{active}</b></div><div className="top-actions"><span className="demo-pill">DEMO MODE</span><button aria-label="Notifications" className="notification"><Bell size={18}/><i/></button><div className="top-avatar">AD</div></div></header><div className="page-content"><div className="page-title"><div><span className="eyebrow">LUXE PERFUME / ADMIN</span><h1>{title}</h1><p>{description}</p></div><div className="page-date">17 NOV 2026</div></div>{children}</div></main></div>;
 }
