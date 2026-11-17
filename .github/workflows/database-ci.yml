@@ -48,12 +48,7 @@ jobs:
         run: |
           docker run --rm --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V2__insert_development_sample_data.sql
 
-      - name: Apply V3 authentication migration
-        shell: bash
-        run: |
-          docker run --rm --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V3__authentication_sessions_and_password_resets.sql
-
-      - name: Verify schema, constraints and sample data
+      - name: Verify Phase 4 schema, constraints and sample data
         shell: bash
         run: |
           set -euo pipefail
@@ -62,4 +57,16 @@ jobs:
             echo "One or more Phase 4 database assertions failed."
             exit 1
           fi
-          docker run --rm --network host --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" --batch --skip-column-names "$MYSQL_DATABASE" -e "SELECT IF(COUNT(*)=2,'PASS','FAIL') FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('auth_sessions','password_reset_tokens')" | grep -qx PASS
+
+      - name: Apply V3 authentication migration
+        shell: bash
+        run: |
+          docker run --rm --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < backend/src/main/resources/db/migration/V3__authentication_sessions_and_password_resets.sql
+
+      - name: Verify Phase 6 authentication tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(docker run --rm --network host --entrypoint mysql mysql:8.4 --batch --skip-column-names --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('auth_sessions','password_reset_tokens')")
+          echo "Phase 6 auth table count: $count (expected 2)"
+          test "$count" = "2"
