@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Progress Report
 
-**Status:** Steps 1–5 runtime implementation committed; latest branch-head GitHub Maven CI PASS. Final regression/security review and owner-local clean-database verification remain pending.
+**Status:** Steps 1–5 runtime implementation committed; final security regression review and latest branch-head GitHub Actions Maven CI PASS (47 tests, 0 failures/errors/skips). Owner-local clean-database verification remains pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 
@@ -132,5 +132,16 @@ Added `OrderStatusTransitionPolicy` and `DefaultOrderStatusTransitionPolicy` for
 
 **Step 5 verification: PASS.** GitHub Actions run 44148435956 — Java 21 + MySQL 8.4, `mvn --batch-mode --no-transfer-progress clean verify`, **45 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**. This run includes the four Customer Order Management tests and three Staff Order Management tests. Flyway V1/V2/V3 were applied in the ephemeral CI database.
 
+## Final branch-head verification — 18 November 2026
+
+- Branch head: `97268ced3eb2148c2431e95587217a303ff90def`.
+- GitHub Actions run #354: [PASS](https://github.com/musa390/My-project/actions/runs/44159524207).
+- GitHub Actions run #355: [PASS](https://github.com/musa390/My-project/actions/runs/44159534434).
+- Environment: Java 21 + MySQL 8.4; command: `mvn --batch-mode --no-transfer-progress clean verify`.
+- Latest test result: **47 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**.
+- The latest suite includes 5 Staff Order Management tests, 4 Customer Order Management tests, 3 order placement tests, 6 checkout preview tests, plus existing backend foundation/catalog/cart tests and OOP pricing tests.
+- Security regression tests verify CUSTOMER cannot gain staff order read access through inherited `orders.read`; staff GET also requires ADMIN/MANAGER role and `PERM_orders.read`. Manager read/write-only tests isolate the role's permissions. AccessDeniedException maps to HTTP 403.
+- PR #6 remains open, draft and unmerged. No frontend source or V1/V2/V3 migration files are included in the PR changed-file list. No V4 migration was required.
+
 ## Remaining Phase 9 scope
-Customer and Staff/Admin order history/detail/tracking/status management and permission separation are implemented and CI-verified. Remaining Phase 9 scope: final regression/security review and owner-local clean-database verification.
+**GitHub-side scope is complete:** Steps 1–5 implementation, regression/security fixes, documentation and latest CI verification all pass. The only outstanding acceptance check is owner-local clean-database verification on the user's Windows environment. This does not block the completed GitHub-side work, but Phase 9 should not be labelled 100% complete until the local check passes. Preserve the earlier failed local database and use a separate clean database.
