@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.security.web.csrf.CsrfToken;
 import jakarta.validation.constraints.Size;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,11 @@ public class AuthController {
             @Value("${app.security.cookies.secure}") boolean secure,
             @Value("${app.security.jwt.refresh-days}") long refreshDays) {
         this.auth = auth; this.secure = secure; this.refreshDays = refreshDays;
+    }
+
+    @GetMapping("/csrf")
+    public Map<String, String> csrf(CsrfToken token) {
+        return Map.of("token", token.getToken());
     }
 
     @PostMapping("/register")
@@ -81,9 +87,9 @@ public class AuthController {
                 .path(path).maxAge(Duration.ZERO).build();
     }
 
-    public record RegisterRequest(@Email @NotBlank String email, @Size(min=12,max=72) String password,
+    public record RegisterRequest(@Email @NotBlank String email, @NotBlank @Size(min=12,max=72) String password,
                                   @NotBlank @Size(max=100) String firstName, @Size(max=100) String lastName) {}
     public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}
     public record EmailRequest(@Email @NotBlank String email) {}
-    public record ResetRequest(@NotBlank String token, @Size(min=12,max=72) String newPassword) {}
+    public record ResetRequest(@NotBlank String token, @NotBlank @Size(min=12,max=72) String newPassword) {}
 }
