@@ -199,6 +199,23 @@ public class CatalogController {
             FROM products p WHERE p.status='ACTIVE' AND p.deleted_at IS NULL AND """+condition+" ORDER BY "+order+" LIMIT 20"));
     }
 
+    @GetMapping("/api/v1/staff/catalog/products")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<Map<String,Object>> staffProducts(@RequestParam(required=false) String q,
+            @RequestParam(required=false) String status,
+            @RequestParam(defaultValue="0") int page,
+            @RequestParam(defaultValue="20") int size) {
+        if(page<0||size<1||size>100) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid pagination");
+        StringBuilder where=new StringBuilder(" WHERE p.deleted_at IS NULL ");
+        List<Object> args=new ArrayList<>();
+        if(q!=null&&!q.isBlank()){where.append(" AND (p.name LIKE ? OR p.slug LIKE ?)");String term="%"+q.trim()+"%";args.add(term);args.add(term);}
+        if(status!=null&&!status.isBlank()){if(!Set.of("DRAFT","ACTIVE","ARCHIVED").contains(status.toUpperCase(Locale.ROOT)))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid product status");where.append(" AND p.status=?");args.add(status.toUpperCase(Locale.ROOT));}
+        String from=" FROM products p JOIN categories c ON c.id=p.category_id LEFT JOIN brands b ON b.id=p.brand_id ";
+        Long total=jdbc.queryForObject("SELECT COUNT(*)"+from+where,Long.class,args.toArray());
+        List<Map<String,Object>> items=jdbc.queryForList("SELECT p.id,p.name,p.slug,p.status,p.is_featured,p.created_at,c.name category_name,b.name brand_name"+from+where+" ORDER BY p.updated_at DESC LIMIT ? OFFSET ?",concat(args,size,page*size).toArray());
+        return ApiResponse.success("Staff product catalogue",Map.of("items",items,"page",page,"size",size,"totalElements",total==null?0:total,"totalPages",total==null?0:(int)Math.ceil(total/(double)size)));
+    }
+
     @PostMapping("/api/v1/staff/catalog/products")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> createProduct(@RequestBody Map<String,Object> body) {
@@ -263,6 +280,14 @@ public class CatalogController {
             bool(body,"isDefault",Boolean.TRUE.equals(v.get("is_default"))),bool(body,"isActive",Boolean.TRUE.equals(v.get("is_active"))),variantId);
         return ApiResponse.success("Variant updated",one("SELECT * FROM product_variants WHERE id=?",variantId));
     }
+    @DeleteMapping("/api/v1/staff/catalog/variants/{variantId}")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<Map<String,Object>> deactivateVariant(@PathVariable long variantId) {
+        int changed=jdbc.update("UPDATE product_variants SET is_active=FALSE,is_default=FALSE WHERE id=?",variantId);
+        if(changed==0) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Variant not found");
+        return ApiResponse.success("Variant deactivated",Map.of("id",variantId,"active",false));
+    }
+
     @PutMapping("/api/v1/staff/catalog/variants/{variantId}/inventory")
     @PreAuthorize("hasAuthority('PERM_inventory.write')")
     public ApiResponse<Map<String,Object>> updateInventory(@PathVariable long variantId,@RequestBody Map<String,Object> body) {
@@ -282,8 +307,21 @@ public class CatalogController {
         boolean primary=bool(body,"primary",false);
         if(primary) jdbc.update("UPDATE product_images SET is_primary=FALSE WHERE product_id=?",id);
         jdbc.update("INSERT INTO product_images(product_id,image_url,alt_text,sort_order,is_primary) VALUES(?,?,?,?,?)",id,url,text(body,"altText",null),number(body,"sortOrder",0),primary);
-        return ApiResponse.success("Product image added",one("SELECT * FROM product_images WHERE id=LAST_INSERT_ID()"));
+        return ApiResponse.success("Product image added",one("SELECT * FROM product_images WHERE product_id=? AND image_url=? ORDER BY id DESC LIMIT 1",id,url));
     }
+    @PutMapping("/api/v1/staff/catalog/images/{imageId}")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<Map<String,Object>> updateImage(@PathVariable long imageId,@RequestBody Map<String,Object> body) {
+        Map<String,Object> image=one("SELECT * FROM product_images WHERE id=?",imageId);
+        boolean primary=bool(body,"primary",Boolean.TRUE.equals(image.get("is_primary")));
+        if(primary) jdbc.update("UPDATE product_images SET is_primary=FALSE WHERE product_id=?",image.get("product_id"));
+        String url=text(body,"imageUrl",String.valueOf(image.get("image_url")));
+        if(!url.startsWith("https://")) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"imageUrl must use HTTPS");
+        jdbc.update("UPDATE product_images SET image_url=?,alt_text=?,sort_order=?,is_primary=? WHERE id=?",
+            url,text(body,"altText",(String)image.get("alt_text")),number(body,"sortOrder",((Number)image.get("sort_order")).longValue()),primary,imageId);
+        return ApiResponse.success("Product image updated",one("SELECT * FROM product_images WHERE id=?",imageId));
+    }
+
     @DeleteMapping("/api/v1/staff/catalog/images/{imageId}")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> deleteImage(@PathVariable long imageId) {
