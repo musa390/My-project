@@ -1,6 +1,6 @@
 # LUXE PERFUME — Project Status
 
-**Last updated:** 2026-11-17
+**Last updated:** 2026-11-18
 
 ## Overall status
 - Phase 0 — Complete.
@@ -12,7 +12,7 @@
 - Phase 6 — **Implementation and automated CI verified; live provider and owner-local verification pending.** Backend CI run 44127586809 passed 13 integration tests (0 failures/errors); Database CI run 44127587025 applied V1/V2/V3 and verified the authentication tables. Google OIDC live callback, Resend email delivery, production secrets/HTTPS/CORS configuration, owner-local end-to-end verification and final security review remain pending. Phase 6 is not 100% complete and its PR #1 remains draft/unmerged.
 - Phase 7 — **100% implementation complete; automated CI PASS.** Working branch: `phase7/product-catalog-backend`; draft PR #4 remains open and unmerged. Implemented public catalog APIs, permission-protected Staff CRUD, variants, images, inventory, search/filter/sort/pagination, availability, merchandising endpoints and optional signed Cloudinary upload. Latest CI run 44132093917: MySQL 8.4, 21 tests, 0 failures/errors, Maven BUILD SUCCESS. Owner-local clean-DB verification and live Cloudinary account upload remain environment checks. No Customer/Admin frontend source changed.
 - Phase 8 — **In progress; initial backend implementation and CI verification PASS; not 100%.** Branch: `phase8/cart-wishlist-inventory`; draft PR #5 is open and unmerged. Persistent Customer cart/wishlist APIs, server-side price recalculation, stock validation, inventory movement audit, stock adjustment and low-stock APIs implemented. CI run 44134986481: MySQL 8.4, V1/V2/V3 applied, 26 tests, 0 failures/errors, Maven BUILD SUCCESS. Final review and owner-local clean-DB verification remain pending.
-- Phase 9 — **Steps 1–5 implementation committed; latest branch-head GitHub Actions CI PASS.** Step 2 adds authenticated `POST /api/v1/checkout/preview`; Step 3 adds authenticated Customer `POST /api/v1/orders` with transactional order snapshots, unique server-side order number, coupon redemption, atomic inventory reservation/movement ledger and cart conversion. Latest run 44148799685: Java 21 + MySQL 8.4, `mvn --batch-mode --no-transfer-progress clean verify`, 45 tests, 0 failures/errors/skips, BUILD SUCCESS. Branch: `phase9/checkout-order-management`; Draft PR #6 remains open/unmerged. Final regression/security review and owner-local clean-DB verification remain pending. Customer/Admin frontend source and V1/V2/V3 remain unchanged.
+- Phase 9 — **Steps 1–5 implementation, security regression fixes, documentation and branch-head CI: PASS.** Latest commit `97268ced3eb2148c2431e95587217a303ff90def`; GitHub Actions runs [#354](https://github.com/musa390/My-project/actions/runs/44159524207) and [#355](https://github.com/musa390/My-project/actions/runs/44159534434) both passed on Java 21 + MySQL 8.4 with `mvn --batch-mode --no-transfer-progress clean verify`: **47 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**. Customer checkout preview, transactional order creation, customer order history/detail/tracking/cancellation, Staff/Admin order list/detail/status transitions, inventory release and role/permission security are implemented. PR #6 remains open/draft/unmerged. Changed-file review confirms no Customer/Admin frontend or V1/V2/V3 migration changes; no V4 migration was required. Only owner-local clean-database verification remains pending; Phase 9 is not yet 100% until that separate Windows check passes.
 
 ## Phase 4 — Database Design
 - MySQL 8.4, InnoDB, utf8mb4; database `luxe_perfume`.
@@ -53,7 +53,7 @@
 - Latest CI run 44145457771: Java 21 + MySQL 8.4, 38 tests, 0 failures/errors/skips, Maven BUILD SUCCESS. Step 3 tests cover successful order persistence/reservation/redemption, insufficient-stock rejection without mutation and duplicate submission prevention.
 - Step 4 adds customer history, detail, tracking and policy-controlled cancellation. Cancellation is transactional and releases reserved inventory using a negative RELEASE movement exactly once; customer access is scoped by authenticated user ID. Four MySQL integration tests pass in the latest CI.
 - Step 5 adds Staff/Admin order list/detail/status transitions, audit history and separate `orders.read` / `orders.write` permission checks. Three MySQL integration tests pass in the latest CI.
-- Remaining: final regression/security review and owner-local clean-database verification.
+- Remaining: owner-local clean-database verification only. GitHub-side regression/security review and CI are complete.
 - Shipping/tax are server-side configurable policies; development defaults are explicitly zero. No payment gateway work (Phase 10) or Customer/Admin frontend source changes are included. V1/V2/V3 remain unchanged.
 
 ## Roadmap
@@ -68,7 +68,7 @@
 | 6 | Authentication & Authorization | CI passed; live provider/local verification pending |
 | 7 | Product & Catalog Backend | 100% implementation + CI; owner environment checks pending |
 | 8 | Cart, Wishlist & Inventory | In progress; final review/local verification pending |
-| 9 | Checkout & Order Management | **Steps 1–5 implementation + CI PASS; final local verification/review pending** |
+| 9 | Checkout & Order Management | **GitHub-side complete; owner-local clean DB verification pending** |
 | 10 | Payment Integration | Pending |
 | 11 | Advanced Business Logic & OOP | Pending |
 | 12 | Additional Integrations | Pending |
