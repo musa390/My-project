@@ -142,16 +142,33 @@ class CatalogIntegrationTest {
             .andExpect(jsonPath("$.data.slug").value(slug)).andReturn();
         Long productId = jdbc.queryForObject("SELECT id FROM products WHERE slug=?",Long.class,slug);
 
+        String sku = "SKU-" + UUID.randomUUID();
         mockMvc.perform(post("/api/v1/staff/catalog/products/" + productId + "/variants").with(csrf()).cookie(access)
                 .contentType("application/json")
-                .content("{\"sku\":\"SKU-" + UUID.randomUUID() + "\",\"variantName\":\"50 ml\",\"price\":3200,\"isDefault\":true,\"initialStock\":7}"))
+                .content("{\"sku\":\"" + sku + "\",\"variantName\":\"50 ml\",\"price\":3200,\"isDefault\":true,\"initialStock\":7}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.quantity_on_hand").value(7));
+        Long variantId = jdbc.queryForObject("SELECT id FROM product_variants WHERE sku=?",Long.class,sku);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/staff/catalog/variants/" + variantId).with(csrf()).cookie(access)
+                .contentType("application/json").content("{\"variantName\":\"50 ml Eau de Parfum\",\"price\":3300,\"compareAtPrice\":3600}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.price").value(3300));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/staff/catalog/variants/" + variantId + "/inventory").with(csrf()).cookie(access)
+                .contentType("application/json").content("{\"quantityOnHand\":9,\"quantityReserved\":1,\"reorderLevel\":2}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.quantity_on_hand").value(9));
+        mockMvc.perform(get("/api/v1/staff/catalog/products/" + productId + "/variants").cookie(access))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1));
 
         mockMvc.perform(post("/api/v1/staff/catalog/products/" + productId + "/images").with(csrf()).cookie(access)
                 .contentType("application/json")
                 .content("{\"imageUrl\":\"https://images.example.invalid/perfume.webp\",\"altText\":\"Test perfume\",\"primary\":true}"))
             .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/staff/catalog/products/" + productId + "/images").cookie(access))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1));
+        mockMvc.perform(post("/api/v1/staff/catalog/cloudinary/signature").with(csrf()).cookie(access))
+            .andExpect(status().isServiceUnavailable());
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/staff/catalog/products/" + productId).with(csrf()).cookie(access)
                 .contentType("application/json").content("{\"status\":\"ACTIVE\"}"))
@@ -163,7 +180,7 @@ class CatalogIntegrationTest {
             .andExpect(jsonPath("$.data.name").value(name))
             .andExpect(jsonPath("$.data.variants.length()").value(1))
             .andExpect(jsonPath("$.data.images.length()").value(1))
-            .andExpect(jsonPath("$.data.available_stock").value(7));
+            .andExpect(jsonPath("$.data.available_stock").value(8));
         mockMvc.perform(get("/api/v1/staff/catalog/products/" + productId).cookie(access))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(productId));
