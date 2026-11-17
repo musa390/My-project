@@ -77,7 +77,7 @@ class StaffOrderManagementIntegrationTest {
                 "SELECT COUNT(*) FROM order_status_history WHERE order_id=?", Integer.class, orderId))
                 .isEqualTo(5);
         assertThat(jdbc.queryForObject(
-                "SELECT changed_by FROM order_status_history WHERE order_id=? AND toStatus='DELIVERED'",
+                "SELECT changed_by FROM order_status_history WHERE order_id=? AND to_status='DELIVERED'",
                 Long.class, orderId)).isEqualTo(manager.userId());
 
         mockMvc.perform(patch("/api/v1/staff/orders/" + orderNumber + "/status")
