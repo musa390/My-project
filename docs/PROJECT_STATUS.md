@@ -7,7 +7,7 @@
 - Full-Stack Phase 0 — **Complete**.
 - Full-Stack Phase 1 — **Complete (100%)**. Project scaffold uploaded and verified on private GitHub repository.
 - Full-Stack Phase 2 — **Complete (100%)**. Customer Frontend finalized; owner-confirmed automated checks and browser QA passed.
-- Full-Stack Phase 3 — **Ready to start**. Separate Admin Frontend development is next.
+- Full-Stack Phase 3 — **IN PROGRESS**. Separate Admin Frontend scaffold and initial management interfaces committed on branch `phase3-admin-frontend`; local verification and browser QA remain.
 
 ## Phase 1 evidence
 
@@ -29,18 +29,23 @@
 - Catalogue, prices, stock, orders, tracking and customer data remain demo/local where applicable.
 - No production database, live payment processing or real backend is claimed.
 
-## Phase 3 next
+## Phase 3 evidence and boundaries
 
-Develop the separate `admin-frontend/` application. Do not modify `customer-frontend/` source, UI, routes, styles or behavior as part of Phase 3. Any future cross-app changes require explicit approval.
+- Working branch: `phase3-admin-frontend`.
+- Initial scaffold includes separate Next.js 15 / React 19 / TypeScript admin application, responsive sidebar, dashboard, demo login, and management interfaces for Products, Categories, Brands, Collections, Orders, Customers, Inventory, Payments, Coupons, Reviews, Banners, Newsletter, Analytics, Staff & Roles, and Settings.
+- Plan and verification checklist: [docs/PHASE3-ADMIN-FRONTEND-PLAN.md](./PHASE3-ADMIN-FRONTEND-PLAN.md).
+- All admin metrics and records are sample/demo data. Login is not connected to authentication. Management controls are not real persistent CRUD operations.
+- Do not modify `customer-frontend/` during Phase 3. Any cross-app changes require explicit approval.
+- Phase 3 remains in progress until install, typecheck, lint, production build, responsive browser QA, accessibility and route checks pass.
 
 ## Roadmap
 
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Project audit and planning | Complete |
-| 1 | Project setup and GitHub | Complete |
+| 1 | Project setup and GitHub | Complete — 100% |
 | 2 | Customer Frontend finalization | Complete — 100% |
-| 3 | Separate Admin Frontend | Ready to start |
+| 3 | Separate Admin Frontend | In progress — initial scaffold |
 | 4 | MySQL database design and ERD | Pending |
 | 5 | Spring Boot backend foundation | Pending |
 | 6 | Authentication and authorization | Pending |
