@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2026-11-17 — Phase 4 started: database design and migrations
-- Designed a normalized MySQL 8.4 schema with 29 tables, 32 foreign-key relationships, indexes and integrity constraints.
+- Designed a normalized MySQL 8.4 schema with 30 tables, 37 foreign-key relationships, indexes and integrity constraints.
 - Added Flyway-compatible V1 schema and V2 development seed migrations.
 - Added ERD, entity catalogue, data rules, MySQL setup instructions and SQL verification script.
 - Updated project status, master plan and handoff.
