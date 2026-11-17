@@ -4,7 +4,7 @@
 - Phase 0: Complete.
 - Phase 1: Complete; project scaffold verified on private GitHub.
 - Phase 2: Complete — 100%; Customer Frontend QA owner-confirmed PASS.
-- Phase 3: In progress; initial separate Admin app shell/dashboard scaffolded.
+- Phase 3: All requested Admin modules have an interface; local checks and browser QA remain pending.
 
 ## Sources of truth
 - `docs/PROJECT_MASTER_PLAN.md`
@@ -16,15 +16,14 @@
 ## Customer Website protection
 `customer-frontend/` is the approved baseline. Phase 3 works only in `admin-frontend/` and documentation. Do not change Customer Website source, UI, routes, styles or behavior without explicit approval.
 
-## Phase 3 remaining
-1. Products and categories screens.
-2. Orders and order details.
-3. Customers and customer profiles.
-4. Inventory and stock.
-5. Promotions/coupons.
-6. Reviews moderation.
-7. Reports/analytics.
-8. Admin profile/settings.
-9. Responsive/accessibility, loading/empty/error states and full QA.
+## Phase 3 implementation
+Admin app contains Dashboard, Login placeholder, Products, Categories, Brands, Collections, Orders, Customers, Inventory, Payments, Coupons/Discounts, Reviews, Banners, Newsletter, Analytics, Staff/Roles and Settings. Shared navigation, search/filter, temporary demo CRUD/status interactions, loading/error/not-found states and responsive styling are included.
 
-Use labelled demo data until backend integration. Admin sign-in is a disabled visual placeholder; no real authentication exists.
+## Phase 3 remaining
+1. In the Admin app run `npm install`.
+2. Run `npm run verify:phase3`, `npm run typecheck`, `npm run lint`, and `npm run build`.
+3. Run `npm run dev` and manually test every module.
+4. Check mobile (~375px), tablet (~768px) and desktop (~1440px), keyboard focus and empty/error states.
+5. Fix issues, then create the final report and mark Phase 3 100%.
+
+All Admin data is demo-only and temporary. Authentication, database persistence, payment processing, email delivery and actual role enforcement belong to later backend/security phases.
