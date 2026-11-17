@@ -198,7 +198,7 @@ public class AuthService {
                 sha256(token));
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token");
         Map<String,Object> row = rows.getFirst();
-        if (row.get("used_at") != null || !Boolean.TRUE.equals(row.get("valid")))
+        if (row.get("used_at") != null || !isTrue(row.get("valid")))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token");
         long userId = ((Number) row.get("user_id")).longValue();
         jdbc.update("UPDATE users SET password_hash=? WHERE id=?", passwordEncoder.encode(newPassword), userId);
