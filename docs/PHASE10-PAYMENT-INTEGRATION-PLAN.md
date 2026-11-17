@@ -113,10 +113,20 @@ Phase 10 is complete only when all required demo/sandbox flows are covered by pa
 
 ## Step 1 audit result — 18 November 2026
 
-- Confirmed the V1 `payments` table and existing `customer_orders.payment_status` constraints can be reused; do not create a parallel payments table.
+- Confirmed the V1 `payments` table and existing `customer_orders.payment_status` constraints can be reused. Owner explicitly approved modifying the existing table. Retain and ALTER the existing `payments` table in V4; do NOT create a new/replacement `payments` table.
 - Confirmed payment providers/methods and payment statuses already have database CHECK constraints.
 - Confirmed there is no backend payment module, customer payment endpoint or refund persistence table yet.
 - Confirmed staff payment reads are already permission-gated by `PERM_payments.read`; customer ownership checks and payment-specific callback routes still need to be designed.
-- Schema gap decision: a narrow Flyway V4 is required for refund lifecycle persistence and explicit idempotency/event audit. V4 design must not rewrite V1/V2/V3.
+- Schema gap decision: a narrow Flyway V4 is required. It will ALTER the existing `payments` table (never create a second payments table), and add separate refund/event audit tables plus a merchant idempotency field. V1/V2/V3 stay unchanged.
 - Provider documentation baseline: SSLCommerz official sandbox flow requires session initiation, IPN notification and server-side Order Validation API verification. bKash and Nagad adapters must follow the merchant-approved current official sandbox documentation; do not guess Nagad API paths, cryptographic details or callback fields.
 - No payment integration source code, credentials, live endpoint, or frontend source has been added at this audit checkpoint.
+
+
+## Owner database design clarification — 18 November 2026
+
+The owner explicitly approved changing the existing payment table. The implementation decision is therefore:
+- Keep the existing V1 `payments` table and all existing rows/foreign keys.
+- Use Flyway V4 to ALTER that same table for missing payment-attempt/idempotency metadata.
+- Add separate `payment_refunds` and `payment_events` tables for refund lifecycle and callback/event audit, with foreign keys back to the existing `payments` rows.
+- Do not create a second table named `payments`, do not drop/rename/replace the existing table, and do not edit V1/V2/V3.
+- Before committing V4, define nullable/backfill-safe columns, provider-specific unique constraints, duplicate callback handling and MySQL 8.4 integration tests. Existing payment history must remain readable.
