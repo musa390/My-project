@@ -73,3 +73,23 @@ All Customer routes require a valid authenticated session. Ownership is resolved
 5. Existing migrations remain immutable unless a documented V4 gap is found.
 6. Customer/Admin Frontend source files remain unchanged.
 7. Final report and project status updated; PR reviewed and left unmerged pending owner approval.
+
+
+## Implementation checkpoint (2026-11-17)
+- Added authenticated persistent cart and wishlist endpoints in `CartWishlistController`.
+- Cart lines persist by user and variant. Add increments an existing line; quantity update and removal are scoped to the authenticated user's active cart.
+- Cart response recalculates unit prices and line totals from current database variant prices. Client-supplied price is ignored.
+- Cart writes lock the active variant and inventory row, then validate on-hand minus reserved stock. Cart entries do not reserve stock.
+- Wishlist add is idempotent and only accepts active products.
+- Added staff inventory detail, low-stock and movement-history reads plus transactional manual stock adjustments with `ADJUSTMENT` ledger entries.
+- Existing catalog inventory updates and initial variant receipts now write inventory movement records.
+- GET inventory routes require `PERM_inventory.read`; stock mutations require `PERM_inventory.write`.
+- Added integration/security coverage including cart persistence across logout/login, user isolation, current-price recalculation, stock validation, wishlist persistence, low-stock and inventory audit.
+- GitHub Actions run `44134986481` succeeded on commit `0cb9088dfe2caf46cd744fc179741eb12c73af1f`: MySQL 8.4, V1/V2/V3 applied, 26 tests, 0 failures/errors, Maven BUILD SUCCESS.
+- No V4 migration was needed; V1/V2/V3 remain unchanged.
+- No Customer Frontend or Admin Frontend source files changed.
+
+## Remaining work
+- Review concurrency and edge cases, add further tests where needed, and verify the final branch head after all follow-up fixes.
+- Owner-local Windows verification against a separate clean database remains pending.
+- PR #5 remains draft and unmerged; no branch merge has been performed.
