@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Progress Report
 
-**Status:** Steps 1–3 runtime implementation complete; Step 3 GitHub Maven CI PASS. Customer order history/detail/cancellation and Staff/Admin order management remain pending.
+**Status:** Steps 1–4 runtime implementation committed; Step 3 GitHub Maven CI PASS. Step 4 automated CI verification pending. Staff/Admin order management remains pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 
@@ -11,7 +11,7 @@
 - Backend CI workflow will be extended to run for Phase 9 branch pushes and pull requests.
 
 ## Next implementation work
-Implement customer order history/detail/tracking/cancellation, then Staff/Admin order list/detail/status transitions. See `PHASE9-CHECKOUT-ORDER-MANAGEMENT-PLAN.md` for transaction rules, security boundaries and acceptance tests.
+Implement Staff/Admin order list/detail/status transitions and order read/write permission separation. Then complete final regression/security review and owner-local clean-database verification. See `PHASE9-CHECKOUT-ORDER-MANAGEMENT-PLAN.md` for transaction rules, security boundaries and acceptance tests.
 
 ## Acceptance
 Phase 9 is not complete until Customer order creation/history/tracking/cancellation and Staff/Admin order management are implemented, backend-calculated totals and atomic stock reservation are verified by MySQL 8.4 integration tests, CI passes, and protected frontend/schema constraints are respected.
@@ -99,6 +99,20 @@ Implemented authenticated Customer endpoint `POST /api/v1/orders`.
 - Order placement integration: 3 tests; checkout preview integration: 6; OOP pricing unit tests: 3.
 - Flyway validated/applied V1/V2/V3 in the ephemeral CI database.
 - Owner-local clean-database verification remains pending; preserve the earlier failed local database.
+
+## Step 4 — Customer Order Management
+
+Implemented customer endpoints:
+- `GET /api/v1/orders` — paginated order history for the authenticated customer.
+- `GET /api/v1/orders/{orderNumber}` — order and item snapshots plus status history.
+- `GET /api/v1/orders/{orderNumber}/tracking` — status timeline.
+- `POST /api/v1/orders/{orderNumber}/cancel` — policy-checked customer cancellation.
+
+All customer queries are scoped by the authenticated principal's user ID; an order belonging to another customer is returned as NOT_FOUND. Cancellation is permitted only for pre-dispatch PENDING/CONFIRMED/PROCESSING orders with UNPAID/FAILED payment status. It locks the order and inventory rows, releases reserved stock with negative RELEASE ledger movements, changes the order to CANCELLED and writes the status-history event in one transaction. Duplicate cancellation cannot release stock a second time. Payment/refund state is not changed.
+
+Added the `OrderCancellationPolicy` abstraction and `PreDispatchOrderCancellationPolicy` implementation. Added MySQL integration tests for customer ownership boundaries, history/detail/tracking, successful cancellation, exactly-once stock release and rejection of shipped orders.
+
+**Step 4 verification:** Code and tests are committed. GitHub Actions verification has not yet been confirmed; the Step 4 implementation is not marked CI-PASS until Java 21/MySQL 8.4 `mvn clean verify` succeeds.
 
 ## Remaining Phase 9 scope
 Customer order history, detail/tracking and cancellation with exactly-once stock release; Staff/Admin order list/detail/status transitions and read/write permission separation; final API documentation, full regression/security review and owner-local clean-database verification.
