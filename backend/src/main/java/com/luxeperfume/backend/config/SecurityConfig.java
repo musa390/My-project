@@ -54,7 +54,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/staff/catalog/categories/**", "/api/v1/staff/catalog/brands/**", "/api/v1/staff/catalog/collections/**").hasAuthority("PERM_catalog.write")
                 .requestMatchers("/api/v1/staff/catalog/**").hasAnyAuthority("PERM_products.write", "PERM_catalog.write")
                 .requestMatchers("/api/v1/staff/products/**").hasAuthority("PERM_products.write")
-                .requestMatchers(HttpMethod.GET, "/api/v1/staff/orders/**").hasAuthority("PERM_orders.read")
+                .requestMatchers(HttpMethod.GET, "/api/v1/staff/orders", "/api/v1/staff/orders/**").hasAuthority("PERM_orders.read")
                 .requestMatchers("/api/v1/staff/orders/**").hasAuthority("PERM_orders.write")
                 .requestMatchers(HttpMethod.GET, "/api/v1/staff/inventory/**").hasAuthority("PERM_inventory.read")
                 .requestMatchers("/api/v1/staff/inventory/**").hasAuthority("PERM_inventory.write")
