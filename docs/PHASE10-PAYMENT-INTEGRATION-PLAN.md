@@ -1,6 +1,6 @@
 # Phase 10 — Payment Integration Plan
 
-**Status:** Step 1 audit complete. Step 2 Java OOP/domain foundation and Flyway V4 draft committed; awaiting CI and MySQL migration verification. No live gateway integration is active.
+**Status:** In progress. COD endpoints and refund manual-review workflow are implemented; CI is running on the latest commits. SSLCommerz is intentionally deferred by owner request. bKash/Nagad provider adapters and server-to-server callback verification remain blocked pending authoritative merchant sandbox specifications and approved sandbox access. No live gateway integration is active.
 **Working branch:** `phase10/payment-integration`
 **Base:** `phase9/checkout-order-management`
 **Previous work:** Phase 9 Draft PR #6 remains open, draft and unmerged.
@@ -146,3 +146,40 @@ The owner explicitly authorized creating or modifying payment schema as needed. 
 - Added Flyway V4 to ALTER the existing `payments` table with merchant reference, idempotency key, verification timestamp and optimistic version; added `payment_refunds` and `payment_events` audit tables.
 - V4 is committed but not yet accepted as verified: MySQL 8.4 migration execution and full Maven tests must pass before proceeding.
 - No provider adapters, COD endpoints, callbacks, refund service, live/sandbox HTTP calls or frontend changes have been implemented at this checkpoint.
+
+
+## Owner scope change — SSLCommerz deferred
+
+The owner requested that SSLCommerz work be postponed and that all other feasible Phase 10 work proceed first. SSLCommerz is therefore explicitly OUT OF CURRENT IMPLEMENTATION SCOPE and remains a later follow-up. Do not implement its adapter, callbacks or validation API in this pass.
+
+## Latest implementation checkpoint — 18 November 2026
+
+### Implemented on `phase10/payment-integration`
+
+- COD payment initiation for the authenticated customer's own eligible order, using the existing `payments` table.
+- COD stays `PENDING` until staff collection confirmation; repeat initiation with the same idempotency key returns the existing payment record.
+- Customer payment history endpoint and staff COD collection endpoint with role/permission checks.
+- Payment domain object, provider/status enums, gateway abstraction and monotonic status-transition policy. A late failure cannot downgrade a paid payment.
+- Flyway V4 extends the existing `payments` table and adds `payment_refunds` and `payment_events`.
+- Flyway V5 adds a least-privilege `payments.refund` permission for Admin/Manager.
+- Flyway V6 separates manual reconciliation references from provider-issued refund IDs.
+- Refund request, history, reconciliation and rejection endpoints. Requests enter `MANUAL_REVIEW`; payment/order status stays unchanged until staff records a reconciliation reference. Partial/full reconciliations update both payment and order statuses transactionally. Refund idempotency and remaining refundable amount checks are included.
+- COD and refund integration tests have been added. Latest commit CI must pass before these tests are accepted as verified.
+
+### CI checkpoint
+
+- Commit `ca1fed310d3716148976df7fed3c1fd90817ad15`: Backend CI and Database Migration CI passed.
+- Later refund workflow/migration/test commits have new CI runs pending at the time of this checkpoint. Do not infer their status from the earlier green run.
+
+### Explicitly not complete
+
+- SSLCommerz: deferred by owner request.
+- bKash: no provider adapter or verified sandbox callback flow has been accepted yet. The official developer documentation is not currently accessible through the available research channel; use merchant-approved official docs before coding endpoints or signature rules.
+- Nagad: no provider adapter or verified sandbox callback flow has been accepted. The official merchant sandbox API specification is required; do not guess endpoints or signature algorithms.
+- Generic gateway callback persistence and provider-side verification are not complete.
+- Gateway failure/retry/replay handling is not yet implemented end-to-end.
+- No actual provider sandbox transaction has been verified. CI mocks or local tests cannot substitute for merchant sandbox verification.
+
+### Completion gate
+
+Do not mark Phase 10 complete until all in-scope, non-deferred provider flows have documented official contracts, server-side verification, persistence, callback replay protection and passing automated tests. Since SSLCommerz is deferred, record it as a separate pending item rather than silently counting it as complete. bKash/Nagad remain blockers until official sandbox docs and approved sandbox access are available.
