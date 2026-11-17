@@ -226,6 +226,12 @@ public class CatalogController {
     }
 
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/products/{id}")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<Map<String,Object>> staffProduct(@PathVariable long id) {
+        return ApiResponse.success("Staff product detail",productView(id));
+    }
+
     @PostMapping("/api/v1/staff/catalog/products")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> createProduct(@RequestBody Map<String,Object> body) {
@@ -262,7 +268,7 @@ public class CatalogController {
     @DeleteMapping("/api/v1/staff/catalog/products/{id}")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> archiveProduct(@PathVariable long id) {
-        int changed=jdbc.update("UPDATE products SET status='ARCHIVED',deleted_at=UTC_TIMESTAMP() WHERE id=? AND deleted_at IS NULL",id);
+        int changed=jdbc.update("UPDATE products SET status='ARCHIVED' WHERE id=? AND deleted_at IS NULL",id);
         if(changed==0) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Product not found");
         return ApiResponse.success("Product archived",Map.of("id",id,"archived",true));
     }
@@ -296,6 +302,12 @@ public class CatalogController {
         return ApiResponse.success("Variant updated",one("SELECT * FROM product_variants WHERE id=?",variantId));
     }
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/variants/{variantId}")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<Map<String,Object>> staffVariant(@PathVariable long variantId) {
+        return ApiResponse.success("Staff variant detail",one("SELECT v.*,i.quantity_on_hand,i.quantity_reserved,i.reorder_level FROM product_variants v LEFT JOIN inventory i ON i.variant_id=v.id WHERE v.id=?",variantId));
+    }
+
     @DeleteMapping("/api/v1/staff/catalog/variants/{variantId}")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> deactivateVariant(@PathVariable long variantId) {
@@ -342,6 +354,12 @@ public class CatalogController {
     }
 
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/images/{imageId}")
+    @PreAuthorize("hasAuthority('PERM_products.write')")
+    public ApiResponse<Map<String,Object>> staffImage(@PathVariable long imageId) {
+        return ApiResponse.success("Staff image detail",one("SELECT * FROM product_images WHERE id=?",imageId));
+    }
+
     @DeleteMapping("/api/v1/staff/catalog/images/{imageId}")
     @PreAuthorize("hasAuthority('PERM_products.write')")
     public ApiResponse<Map<String,Object>> deleteImage(@PathVariable long imageId) {
@@ -351,6 +369,17 @@ public class CatalogController {
     }
 
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/categories")
+    @PreAuthorize("hasAuthority('PERM_catalog.write')")
+    public ApiResponse<List<Map<String,Object>>> staffCategories() {
+        return ApiResponse.success("Staff categories",jdbc.queryForList("SELECT * FROM categories ORDER BY sort_order,name"));
+    }
+    @GetMapping("/api/v1/staff/catalog/categories/{id}")
+    @PreAuthorize("hasAuthority('PERM_catalog.write')")
+    public ApiResponse<Map<String,Object>> staffCategory(@PathVariable long id) {
+        return ApiResponse.success("Staff category detail",one("SELECT * FROM categories WHERE id=?",id));
+    }
+
     @PostMapping("/api/v1/staff/catalog/categories")
     @PreAuthorize("hasAuthority('PERM_catalog.write')")
     public ApiResponse<Map<String,Object>> createCategory(@RequestBody Map<String,Object> body) {
@@ -379,6 +408,17 @@ public class CatalogController {
     }
 
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/brands")
+    @PreAuthorize("hasAuthority('PERM_catalog.write')")
+    public ApiResponse<List<Map<String,Object>>> staffBrands() {
+        return ApiResponse.success("Staff brands",jdbc.queryForList("SELECT * FROM brands ORDER BY name"));
+    }
+    @GetMapping("/api/v1/staff/catalog/brands/{id}")
+    @PreAuthorize("hasAuthority('PERM_catalog.write')")
+    public ApiResponse<Map<String,Object>> staffBrand(@PathVariable long id) {
+        return ApiResponse.success("Staff brand detail",one("SELECT * FROM brands WHERE id=?",id));
+    }
+
     @PostMapping("/api/v1/staff/catalog/brands")
     @PreAuthorize("hasAuthority('PERM_catalog.write')")
     public ApiResponse<Map<String,Object>> createBrand(@RequestBody Map<String,Object> body) {
@@ -406,6 +446,19 @@ public class CatalogController {
     }
 
     @Transactional
+    @GetMapping("/api/v1/staff/catalog/collections")
+    @PreAuthorize("hasAuthority('PERM_catalog.write')")
+    public ApiResponse<List<Map<String,Object>>> staffCollections() {
+        return ApiResponse.success("Staff collections",jdbc.queryForList("SELECT * FROM collections ORDER BY created_at DESC"));
+    }
+    @GetMapping("/api/v1/staff/catalog/collections/{id}")
+    @PreAuthorize("hasAuthority('PERM_catalog.write')")
+    public ApiResponse<Map<String,Object>> staffCollection(@PathVariable long id) {
+        Map<String,Object> c=one("SELECT * FROM collections WHERE id=?",id);
+        c.put("products",jdbc.queryForList("SELECT p.id,p.name,p.slug,cp.sort_order FROM collection_products cp JOIN products p ON p.id=cp.product_id WHERE cp.collection_id=? ORDER BY cp.sort_order,p.name",id));
+        return ApiResponse.success("Staff collection detail",c);
+    }
+
     @PostMapping("/api/v1/staff/catalog/collections")
     @PreAuthorize("hasAuthority('PERM_catalog.write')")
     public ApiResponse<Map<String,Object>> createCollection(@RequestBody Map<String,Object> body) {
