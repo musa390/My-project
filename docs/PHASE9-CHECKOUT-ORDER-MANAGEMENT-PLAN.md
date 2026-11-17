@@ -49,7 +49,7 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 ## Implementation sequence
 
 - [x] Inspect existing address, cart, coupon, order, order-item, coupon-redemption and inventory schema plus auth principal conventions.
-- [ ] Add DTO validation and server-side checkout quote/pricing/shipping/coupon services.
+- [x] Add DTO validation and server-side checkout quote/pricing/shipping/coupon services (runtime implementation added; CI verification pending).
 - [ ] Implement transactional order creation, stock reservation and cart conversion.
 - [ ] Implement customer history, detail, tracking and cancellation with stock release.
 - [ ] Implement Staff/Admin order list/detail/status transitions and permission checks.
@@ -99,3 +99,30 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 
 ### Schema decision
 The existing V1 schema already supports the planned Phase 9 workflow. No V4 migration is justified by the current audit. V1/V2/V3 remain immutable.
+
+
+## Step 2 — Checkout Validation & Pricing Engine (implementation checkpoint)
+
+**Runtime API:** `POST /api/v1/checkout/preview`
+
+**Request:** `{ "addressId": 123, "couponCode": "OPTIONAL-CODE" }`. Unknown client fields such as price, subtotal, discount, shipping, tax and grand total are ignored and never used.
+
+**Validation and calculation:**
+- Requires an authenticated customer; customer ID is taken from the verified security principal.
+- Confirms the selected address belongs to that customer.
+- Loads the customer's active cart, product/variant status, current database price and available stock.
+- Rejects empty carts, inactive/deleted products, inactive variants and insufficient available stock.
+- Validates coupon active state, start/end dates, global usage limit, per-customer redemption limit, minimum cart subtotal, and product/category restrictions.
+- Supports percentage and fixed coupons; maximum discount and eligible subtotal caps are enforced.
+- Product/category restriction scopes are combined as eligible-product OR eligible-category matches; only eligible cart lines receive allocated discounts.
+- Uses `BigDecimal` for money and a two-decimal rounding policy.
+- Shipping and tax are calculated by server-side policy interfaces. Development defaults are explicitly configured as BDT 0.00 shipping and 0.00% tax; production/business values must be set through `CHECKOUT_SHIPPING_FLAT_RATE` and `CHECKOUT_TAX_PERCENTAGE`.
+- Preview is read-only: it does not reserve inventory, consume coupon usage, create an order or change the cart. Order creation must revalidate all values transactionally in the next implementation step.
+
+**Java OOP used in runtime code:**
+- Encapsulation: `CheckoutLine`, `MoneyBreakdown`, `Coupon`.
+- Inheritance: `AbstractCouponDiscountStrategy`.
+- Abstraction: `CouponDiscountStrategy`, `ShippingPolicy`, `TaxPolicy`.
+- Polymorphism: percentage/fixed coupon strategy implementations and injected policy interfaces.
+
+**Tests added:** strategy/domain unit tests and MySQL-backed MockMvc integration tests for percentage/fixed coupons, max discount, product restrictions, minimum spend, usage limits, address ownership, stock validation, authentication and ignored client totals. CI result is pending; do not mark tests PASS until the latest branch-head workflow succeeds.
