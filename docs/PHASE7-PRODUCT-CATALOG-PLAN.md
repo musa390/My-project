@@ -76,3 +76,17 @@ All writes require authenticated staff/admin permissions; enforce authorization 
 4. Maven build and GitHub Actions pass against MySQL 8.4.
 5. No Customer Frontend or Admin Frontend source changes.
 6. Local owner verification is recorded separately; do not claim 100% without it.
+
+
+## Final implementation checkpoint (2026-11-17)
+- Implemented the public Customer catalog endpoints and permission-protected Staff catalog endpoints described above.
+- Product/category/brand/collection management includes staff read/list plus create/update/deactivate/archive operations.
+- Product variants include create/read/list/update/deactivate; inventory has a permission-protected update route.
+- Product images include create/read/list/update/delete metadata operations.
+- Product publication is blocked until at least one active variant exists. Customer APIs return ACTIVE products only and expose only active variants.
+- Price filtering uses a single active variant satisfying the requested range; sort values are allowlisted and pagination is bounded.
+- Cloudinary integration is a signed direct-upload flow. The API returns a short-lived timestamp/signature and public upload URL only when the three Cloudinary environment variables are configured. The API secret is never returned. When unconfigured, the endpoint responds with HTTP 503.
+- Database V1/V2/V3 migrations remain unchanged; the existing schema was sufficient.
+- Final CI verification on branch head `5074dc3780c14c11de689fcb873f6518511b3b7f`: MySQL 8.4, 21 tests, 0 failures, 0 errors, Maven BUILD SUCCESS.
+- No Customer Frontend or Admin Frontend source files were changed.
+- Owner-local Windows verification and a live Cloudinary account upload remain environment/provider checks; do not share provider secrets in chat.
