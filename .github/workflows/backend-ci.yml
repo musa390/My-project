@@ -7,11 +7,15 @@ on:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
       - "database/**"
+      - "docs/PHASE7-PRODUCT-CATALOG-*.md"
+      - "docs/PROJECT_STATUS.md"
   pull_request:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
       - "database/**"
+      - "docs/PHASE7-PRODUCT-CATALOG-*.md"
+      - "docs/PROJECT_STATUS.md"
   workflow_dispatch:
 
 jobs:
