@@ -92,6 +92,44 @@ class BackendFoundationIntegrationTest {
     }
 
     @Test
+    void loginRejectsWrongPasswordAndAcceptsValidCredentials() throws Exception {
+        String email = "login-" + UUID.randomUUID() + "@example.invalid";
+        mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Login\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/auth/login").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"WrongPassphrase123!\"}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/login").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Set-Cookie", containsString("lp_access=")));
+    }
+
+    @Test
+    void customerAndStaffPermissionBoundariesAreEnforced() throws Exception {
+        String email = "rbac-" + UUID.randomUUID() + "@example.invalid";
+        MvcResult registration = mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"RBAC\"}"))
+                .andExpect(status().isOk()).andReturn();
+        Cookie access = registration.getResponse().getCookie("lp_access");
+        Long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long.class, email);
+        mockMvc.perform(get("/api/v1/admin/secure-test").cookie(access))
+                .andExpect(status().isForbidden());
+
+        jdbc.update("DELETE FROM user_roles WHERE user_id=?", userId);
+        jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='INVENTORY_STAFF'", userId);
+        mockMvc.perform(get("/api/v1/staff/orders/secure-test").cookie(access))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/staff/inventory/secure-test").cookie(access))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void refreshRotatesTokenAndLogoutRevokesSession() throws Exception {
         String email = "session-" + UUID.randomUUID() + "@example.invalid";
         MvcResult registration = mockMvc.perform(post("/api/v1/auth/register").with(csrf())
