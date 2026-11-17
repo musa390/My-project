@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.client.RestClient;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -92,6 +93,43 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         long userId = ((Number) user.get("id")).longValue();
         jdbc.update("UPDATE users SET last_login_at=UTC_TIMESTAMP() WHERE id=?", userId);
+        return createSession(userId, userAgent, ip);
+    }
+
+    @Transactional
+    public IssuedSession loginGoogle(OidcUser oidcUser, String userAgent, String ip) {
+        Boolean verified = oidcUser.getClaim("email_verified");
+        String email = oidcUser.getEmail();
+        String subject = oidcUser.getSubject();
+        if (email == null || !Boolean.TRUE.equals(verified) || subject == null || subject.isBlank())
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google account email must be verified");
+
+        List<Long> existing = jdbc.query(
+                "SELECT id FROM users WHERE auth_provider='GOOGLE' AND provider_subject=? AND deleted_at IS NULL",
+                (rs, n) -> rs.getLong(1), subject);
+        long userId;
+        if (!existing.isEmpty()) {
+            userId = existing.getFirst();
+        } else {
+            Integer emailTaken = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE email=?", Integer.class,
+                    email.trim().toLowerCase());
+            if (emailTaken != null && emailTaken > 0)
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "An account already exists for this email. Sign in using its original method.");
+            KeyHolder key = new GeneratedKeyHolder();
+            jdbc.update((Connection c) -> {
+                PreparedStatement ps = c.prepareStatement(
+                    "INSERT INTO users(email,password_hash,first_name,last_name,auth_provider,provider_subject,account_status,email_verified_at) VALUES(?,NULL,?,?, 'GOOGLE',?,'ACTIVE',UTC_TIMESTAMP())",
+                    Statement.RETURN_GENERATED_KEYS);
+                ps.setString(1, email.trim().toLowerCase());
+                ps.setString(2, oidcUser.getGivenName() == null ? "Google" : oidcUser.getGivenName());
+                ps.setString(3, oidcUser.getFamilyName());
+                ps.setString(4, subject);
+                return ps;
+            }, key);
+            userId = key.getKey().longValue();
+            jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='CUSTOMER'", userId);
+        }
         return createSession(userId, userAgent, ip);
     }
 
