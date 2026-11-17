@@ -51,6 +51,10 @@ public class SecurityConfig {
                                 "/login/oauth2/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/staff/products/**").hasAuthority("PERM_products.write")
+                        .requestMatchers("/api/v1/staff/orders/**").hasAuthority("PERM_orders.write")
+                        .requestMatchers("/api/v1/staff/inventory/**").hasAuthority("PERM_inventory.write")
+                        .requestMatchers("/api/v1/staff/payments/**").hasAuthority("PERM_payments.read")
                         .requestMatchers("/api/v1/staff/**").hasAnyRole("ADMIN", "MANAGER", "INVENTORY_STAFF")
                         .anyRequest().authenticated())
                 .formLogin(form -> form.disable())
