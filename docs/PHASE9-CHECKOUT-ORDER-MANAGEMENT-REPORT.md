@@ -45,3 +45,8 @@ Phase 9 is not complete until Customer order creation/history/tracking/cancellat
 
 ### Schema decision
 The existing V1 schema already supports the planned Phase 9 workflow. No V4 migration is justified by the current audit. V1/V2/V3 remain immutable.
+
+
+## Java 21 OOP requirement
+
+The project owner confirmed that Java OOP is the primary backend programming approach and all four pillars are mandatory in Phase 9. A dedicated architecture document now maps Encapsulation, Inheritance, Abstraction and Polymorphism to concrete checkout/order domain classes, strategy interfaces, services and tests. This is architecture documentation only; runtime Java classes and APIs have not yet been implemented or tested.
