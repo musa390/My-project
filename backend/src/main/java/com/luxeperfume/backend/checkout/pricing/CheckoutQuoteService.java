@@ -33,8 +33,6 @@ public class CheckoutQuoteService {
         BigDecimal discount = BigDecimal.ZERO.setScale(2);
         if (coupon != null) {
             if (eligibleSubtotal.signum() <= 0) throw new IllegalArgumentException("Coupon does not apply to items in this cart");
-            if (eligibleSubtotal.compareTo(coupon.minimumOrderAmount()) < 0)
-                throw new IllegalArgumentException("Cart does not meet the coupon minimum order amount");
             Coupon effective = new Coupon(coupon.code(), coupon.discountType(), coupon.discountValue(),
                     coupon.minimumOrderAmount(), coupon.maximumDiscountAmount(), eligibleSubtotal,
                     coupon.eligibleProductIds(), coupon.eligibleCategoryIds(), coupon.restricted());
