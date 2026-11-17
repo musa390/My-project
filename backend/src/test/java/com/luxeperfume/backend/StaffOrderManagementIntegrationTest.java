@@ -39,12 +39,12 @@ class StaffOrderManagementIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totalElements").value(1))
             .andExpect(jsonPath("$.data.items[0].orderNumber").value(orderNumber))
-            .andExpect(jsonPath("$.data.items[0].item_count").value(2));
+            .andExpect(jsonPath("$.data.items[0].itemCount").value(2));
 
         mockMvc.perform(get("/api/v1/staff/orders/" + orderNumber).cookie(manager.access()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.items.length()").value(1))
-            .andExpect(jsonPath("$.data.statusHistory[0].to_status").value("PENDING"));
+            .andExpect(jsonPath("$.data.statusHistory[0].toStatus").value("PENDING"));
 
         mockMvc.perform(patch("/api/v1/staff/orders/" + orderNumber + "/status")
                 .with(csrf()).cookie(manager.access()).contentType("application/json")
@@ -77,7 +77,7 @@ class StaffOrderManagementIntegrationTest {
                 "SELECT COUNT(*) FROM order_status_history WHERE order_id=?", Integer.class, orderId))
                 .isEqualTo(5);
         assertThat(jdbc.queryForObject(
-                "SELECT changed_by FROM order_status_history WHERE order_id=? AND to_status='DELIVERED'",
+                "SELECT changed_by FROM order_status_history WHERE order_id=? AND toStatus='DELIVERED'",
                 Long.class, orderId)).isEqualTo(manager.userId());
 
         mockMvc.perform(patch("/api/v1/staff/orders/" + orderNumber + "/status")
