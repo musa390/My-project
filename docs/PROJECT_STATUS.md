@@ -10,7 +10,7 @@
 - Phase 4 — **Complete (100%)**; 30-table MySQL schema, ERD, V1/V2 migrations, sample data, constraints and MySQL 8.4 CI verification passed.
 - Phase 5 — **Approximately 90%; implementation and GitHub CI verified, local owner verification pending.** The 4 integration tests passed in GitHub CI against MySQL 8.4. Local Windows Maven verification previously failed because Flyway found a failed, partially-applied V1 migration in the persistent local database. Preserve that database; owner verification against a separately-created clean database remains pending.
 - Phase 6 — **Implementation and automated CI verified; live provider and owner-local verification pending.** Backend CI run 44127586809 passed 13 integration tests (0 failures/errors); Database CI run 44127587025 applied V1/V2/V3 and verified the authentication tables. Google OIDC live callback, Resend email delivery, production secrets/HTTPS/CORS configuration, owner-local end-to-end verification and final security review remain pending. Phase 6 is not 100% complete and its PR #1 remains draft/unmerged.
-- Phase 7 — **Started; implementation in progress.** Working branch: `phase7/product-catalog-backend`. Scope and acceptance plan: `PHASE7-PRODUCT-CATALOG-PLAN.md`. Backend-first; Customer Frontend and Admin Frontend source remain protected.
+- Phase 7 — **100% implementation complete; automated CI PASS.** Working branch: `phase7/product-catalog-backend`; draft PR #4 remains open and unmerged. Implemented public catalog APIs, permission-protected Staff CRUD, variants, images, inventory, search/filter/sort/pagination, availability, merchandising endpoints and optional signed Cloudinary upload. Latest CI run 44132093917: MySQL 8.4, 21 tests, 0 failures/errors, Maven BUILD SUCCESS. V1/V2/V3 unchanged. Owner-local clean-DB verification and live Cloudinary account upload remain environment checks. No Customer/Admin frontend source changed.
 
 ## Phase 4 — Database Design
 - MySQL 8.4, InnoDB, utf8mb4; database `luxe_perfume`.
@@ -49,7 +49,7 @@
 | 4 | Database Design | Complete (100%) |
 | 5 | Backend Foundation | ~90%; local verification pending |
 | 6 | Authentication & Authorization | CI passed; live provider/local verification pending |
-| 7 | Product & Catalog Backend | **In progress** |
+| 7 | Product & Catalog Backend | **Complete (100% implementation + CI; owner environment checks pending)** |
 | 8 | Cart, Wishlist & Inventory | Pending |
 | 9 | Checkout & Order Management | Pending |
 | 10 | Payment Integration | Pending |
