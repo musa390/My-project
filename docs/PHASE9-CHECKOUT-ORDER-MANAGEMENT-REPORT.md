@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Progress Report
 
-**Status:** Started — GitHub branch and implementation plan established. No checkout/order runtime implementation is claimed yet.
+**Status:** Step 1 audit and Step 2 Checkout Validation/Pricing Engine implementation complete; Step 2 GitHub Maven CI PASS. Order creation and management remain pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 
@@ -61,3 +61,14 @@ The project owner confirmed that Java OOP is the primary backend programming app
 - Added configurable server-side flat shipping and percentage tax policies. Development defaults are explicitly 0.00 / 0.00%; production values must be configured.
 - Checkout preview does not create orders, reserve stock, consume coupon usage or mutate carts.
 - Added OOP unit tests and MySQL-backed API integration tests. **GitHub Actions verification is pending; no Maven PASS claim is made yet.**
+
+
+### Step 2 — Maven verification: PASS
+
+- GitHub Actions: https://github.com/musa390/My-project/actions/runs/44143372079
+- Java 21 + MySQL 8.4.
+- `mvn --batch-mode --no-transfer-progress clean verify`: **BUILD SUCCESS**.
+- **35 tests, 0 failures, 0 errors, 0 skipped**.
+- Checkout integration: 6 tests; OOP pricing unit tests: 3 tests.
+- Flyway V1/V2/V3 applied successfully in CI.
+- The run verifies the Step 2 branch checkpoint. Owner-local clean-database verification remains pending; preserve the earlier failed local database.
