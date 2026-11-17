@@ -11,7 +11,6 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.util.UUID;
-import java.util.Map;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,7 +22,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CheckoutPreviewIntegrationTest {
     @Autowired MockMvc mockMvc;
     @Autowired JdbcTemplate jdbc;
-    @Autowired com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Test
     void previewUsesDatabasePricesAndCalculatesPercentageCouponOnServer() throws Exception {
@@ -36,7 +34,9 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode, "subtotal", 1, "discountTotal", 99999, "shippingTotal", 99999, "grandTotal", 1))))
+                .content("""
+                        {"addressId": %d, "couponCode": "%s", "subtotal": 1, "discountTotal": 99999, "shippingTotal": 99999, "grandTotal": 1}
+                        """.formatted(addressId, couponCode))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(2400))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(150))
@@ -58,7 +58,9 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode))))
+                .content("""
+                        {"addressId": %d, "couponCode": "%s"}
+                        """.formatted(addressId, couponCode))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(1400))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(250))
@@ -101,7 +103,9 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode))))
+                .content("""
+                        {"addressId": %d, "couponCode": "%s"}
+                        """.formatted(addressId, couponCode))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(1500))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(100))
@@ -120,7 +124,9 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode))))
+                .content("""
+                        {"addressId": %d, "couponCode": "%s"}
+                        """.formatted(addressId, couponCode))
             .andExpect(status().isUnprocessableEntity());
     }
 
@@ -134,7 +140,9 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode))))
+                .content("""
+                        {"addressId": %d, "couponCode": "%s"}
+                        """.formatted(addressId, couponCode))
             .andExpect(status().isUnprocessableEntity());
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf())
