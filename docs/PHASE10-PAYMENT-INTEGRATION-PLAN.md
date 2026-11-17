@@ -1,6 +1,6 @@
 # Phase 10 — Payment Integration Plan
 
-**Status:** Started — Step 1 (payment schema and integration audit) in progress. No gateway implementation or payment-state mutation is complete yet.
+**Status:** Step 1 audit complete; implementation has not started. No gateway calls or payment-state mutations have been implemented.
 **Working branch:** `phase10/payment-integration`
 **Base:** `phase9/checkout-order-management`
 **Previous work:** Phase 9 Draft PR #6 remains open, draft and unmerged.
@@ -24,7 +24,7 @@ The Phase 9 branch already contains:
 - Allowed payment statuses: `INITIATED`, `PENDING`, `AUTHORIZED`, `PAID`, `FAILED`, `CANCELLED`, `REFUNDED`, `PARTIALLY_REFUNDED`.
 - Staff permission catalogue includes `payments.read`.
 
-The existing schema must be inspected further for refund persistence, attempt/idempotency requirements, provider-session uniqueness, and audit needs before deciding whether a Flyway V4 migration is necessary. V1/V2/V3 are immutable; do not edit them.
+The repository audit confirms there is no payment module/package or customer payment API yet. SecurityConfig already protects `/api/v1/staff/payments/**` with `PERM_payments.read`. The V1 `payments` table has no refund table, no dedicated merchant-side idempotency key, and no separate callback/event ledger. The existing `provider_transaction_id` unique key helps prevent duplicate provider transaction IDs but is not a complete refund/callback audit model. **A narrow V4 migration is justified** to add a unique merchant-side payment-attempt/idempotency reference and durable refund/event audit records. Exact DDL and indexes will be reviewed and integration-tested before the migration is added. V1/V2/V3 are immutable; do not edit them.
 
 ## Java OOP architecture
 
@@ -109,3 +109,14 @@ No endpoint accepts a client-supplied amount as authoritative. Amount and curren
 ## Completion definition
 
 Phase 10 is complete only when all required demo/sandbox flows are covered by passing automated tests and a clean-database local verification: COD lifecycle; SSLCommerz, bKash and Nagad sandbox initiation/verification; persisted payment records; correct order/payment statuses; failed/cancelled/pending handling; duplicate/replayed callback safety; and the supported refund workflow. No frontend success message alone may mark an order PAID.
+
+
+## Step 1 audit result — 18 November 2026
+
+- Confirmed the V1 `payments` table and existing `customer_orders.payment_status` constraints can be reused; do not create a parallel payments table.
+- Confirmed payment providers/methods and payment statuses already have database CHECK constraints.
+- Confirmed there is no backend payment module, customer payment endpoint or refund persistence table yet.
+- Confirmed staff payment reads are already permission-gated by `PERM_payments.read`; customer ownership checks and payment-specific callback routes still need to be designed.
+- Schema gap decision: a narrow Flyway V4 is required for refund lifecycle persistence and explicit idempotency/event audit. V4 design must not rewrite V1/V2/V3.
+- Provider documentation baseline: SSLCommerz official sandbox flow requires session initiation, IPN notification and server-side Order Validation API verification. bKash and Nagad adapters must follow the merchant-approved current official sandbox documentation; do not guess Nagad API paths, cryptographic details or callback fields.
+- No payment integration source code, credentials, live endpoint, or frontend source has been added at this audit checkpoint.
