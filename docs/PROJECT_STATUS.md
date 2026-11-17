@@ -9,7 +9,7 @@
 - Phase 3 — Complete (100%); Admin implementation, local checks, CI and owner-confirmed browser QA passed.
 - Phase 4 — **Complete (100%)**; 30-table MySQL schema, ERD, V1/V2 migrations, sample data, constraints and MySQL 8.4 CI verification passed.
 - Phase 5 — **Approximately 90%; implementation and GitHub CI verified, local owner verification pending.** The 4 integration tests passed in GitHub CI against MySQL 8.4. Local Windows Maven verification previously failed because Flyway found a failed, partially-applied V1 migration in the persistent local database. The local database has not been declared repaired or verified.
-- Phase 6 — **Backend implementation and 13-test GitHub CI verified; provider and owner-local verification pending.** See `PHASE6-AUTHENTICATION-AUTHORIZATION-REPORT.md`. Do not mark 100% until Google OIDC/Resend credentials, production configuration and owner local end-to-end checks are completed.
+- Phase 6 — **Backend implementation, 13-test GitHub CI and V1–V3 database CI verified; provider and owner-local verification pending.** See `PHASE6-AUTHENTICATION-AUTHORIZATION-REPORT.md`. Do not mark 100% until Google OIDC/Resend credentials, production configuration and owner local end-to-end checks are completed.
 
 ## Phase 1–3 evidence
 See the respective phase reports and commit history in this repository. Phase 3 final report: ./PHASE3-ADMIN-FRONTEND-REPORT.md.
@@ -55,7 +55,7 @@ See the respective phase reports and commit history in this repository. Phase 3 
 | 3 | Admin Frontend Development | Complete (100%) |
 | 4 | Database Design | **Complete (100%)** |
 | 5 | Spring Boot backend foundation | **Approximately 90%; local verification pending** |
-| 6 | Authentication and authorization | **Implementation + 13-test backend CI passed; external/local verification pending** |
+| 6 | Authentication and authorization | **Implementation + 13-test backend CI + V1–V3 database CI passed; external/local verification pending** |
 | 7 | Product/catalog backend | Pending |
 | 8 | Cart, wishlist and inventory | Pending |
 | 9 | Checkout and order management | Pending |
