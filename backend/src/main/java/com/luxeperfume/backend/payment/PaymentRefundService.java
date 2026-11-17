@@ -46,9 +46,12 @@ public class PaymentRefundService {
                 FROM payment_refunds r WHERE r.idempotency_key=?
                 """, idempotencyKey);
         if (duplicate != null) {
-            if (number(duplicate.get("payment_id")) != paymentId) {
+            if (number(duplicate.get("payment_id")) != paymentId
+                    || ((BigDecimal) duplicate.get("amount")).compareTo(amount) != 0
+                    || !currency.equals(duplicate.get("currency"))
+                    || !reason.equals(duplicate.get("reason"))) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Idempotency-Key was already used for another payment");
+                        "Idempotency-Key was already used for a different refund request");
             }
             return camelCase(duplicate);
         }
@@ -116,7 +119,7 @@ public class PaymentRefundService {
 
         jdbc.update("""
                 UPDATE payment_refunds SET refund_status='SUCCEEDED',
-                    provider_refund_id=?,processed_at=CURRENT_TIMESTAMP
+                    reconciliation_reference=?,processed_at=CURRENT_TIMESTAMP
                 WHERE id=? AND refund_status IN ('MANUAL_REVIEW','PENDING')
                 """, reconciliationReference, refundId);
         BigDecimal completed = jdbc.queryForObject("""
@@ -125,10 +128,16 @@ public class PaymentRefundService {
                 """, BigDecimal.class, number(refund.get("payment_id")));
         String nextStatus = completed.compareTo((BigDecimal) refund.get("payment_amount")) >= 0
                 ? "REFUNDED" : "PARTIALLY_REFUNDED";
-        jdbc.update("UPDATE payments SET payment_status=? WHERE id=? AND payment_status IN ('PAID','PARTIALLY_REFUNDED')",
+        int paymentUpdated = jdbc.update(
+                "UPDATE payments SET payment_status=? WHERE id=? AND payment_status IN ('PAID','PARTIALLY_REFUNDED')",
                 nextStatus, number(refund.get("payment_id")));
-        jdbc.update("UPDATE customer_orders SET payment_status=? WHERE id=? AND payment_status IN ('PAID','PARTIALLY_REFUNDED')",
+        int orderUpdated = jdbc.update(
+                "UPDATE customer_orders SET payment_status=? WHERE id=? AND payment_status IN ('PAID','PARTIALLY_REFUNDED')",
                 nextStatus, number(refund.get("order_id")));
+        if (paymentUpdated != 1 || orderUpdated != 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Payment/order state mismatch; refund reconciliation was rolled back");
+        }
         jdbc.update("""
                 INSERT INTO payment_events
                     (payment_id,provider,event_type,event_idempotency_key,
@@ -185,7 +194,7 @@ public class PaymentRefundService {
 
     private Map<String, Object> detail(long refundId) {
         Map<String, Object> row = oneOrNull("""
-                SELECT id,payment_id,refund_reference,provider_refund_id,idempotency_key,
+                SELECT id,payment_id,refund_reference,provider_refund_id,reconciliation_reference,idempotency_key,
                        amount,currency,refund_status,reason,requested_by,requested_at,processed_at
                 FROM payment_refunds WHERE id=?
                 """, refundId);
