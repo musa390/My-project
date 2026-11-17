@@ -1,0 +1,124 @@
+package com.luxeperfume.backend;
+
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class CatalogIntegrationTest {
+    @Autowired MockMvc mockMvc;
+    @Autowired JdbcTemplate jdbc;
+
+    @Test
+    void publicCatalogEndpointsAreAnonymousAndReturnPublishedContent() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/products"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.items").isArray())
+            .andExpect(jsonPath("$.data.totalElements").value(2));
+        mockMvc.perform(get("/api/v1/catalog/categories")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/catalog/brands")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/catalog/collections")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/catalog/featured")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/catalog/new-arrivals")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/catalog/best-sellers")).andExpect(status().isOk());
+    }
+
+    @Test
+    void searchFilterSortAndPaginationAreApplied() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/products")
+                .param("q","Floral").param("category","floral")
+                .param("sort","price_asc").param("page","0").param("size","1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items.length()").value(1))
+            .andExpect(jsonPath("$.data.totalElements").value(1))
+            .andExpect(jsonPath("$.data.page").value(0))
+            .andExpect(jsonPath("$.data.size").value(1));
+    }
+
+    @Test
+    void productDetailIncludesImagesVariantsAndStockAvailability() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/products/demo-floral-eau-de-parfum"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.name").value("Demo Floral Eau de Parfum"))
+            .andExpect(jsonPath("$.data.images.length()").value(1))
+            .andExpect(jsonPath("$.data.variants.length()").value(1))
+            .andExpect(jsonPath("$.data.available_stock").value(25));
+    }
+
+    @Test
+    void draftAndArchivedProductsAreNotPublic() throws Exception {
+        String slug = "catalog-hidden-" + UUID.randomUUID();
+        Long category = jdbc.queryForObject("SELECT id FROM categories WHERE slug='floral'", Long.class);
+        jdbc.update("INSERT INTO products(category_id,name,slug,status) VALUES(?,?,?,'DRAFT')",category,"Hidden test product",slug);
+        mockMvc.perform(get("/api/v1/catalog/products/" + slug)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/catalog/products").param("q","Hidden test product"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(0));
+    }
+
+    @Test
+    void staffCatalogMutationRequiresAuthenticationAndPermission() throws Exception {
+        mockMvc.perform(post("/api/v1/staff/catalog/categories").with(csrf())
+                .contentType("application/json").content("{\"name\":\"Protected Category\"}"))
+            .andExpect(status().isUnauthorized());
+
+        String email = "catalog-customer-" + UUID.randomUUID() + "@example.invalid";
+        MvcResult registration = mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                .contentType("application/json")
+                .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Catalog\"}"))
+            .andExpect(status().isOk()).andReturn();
+        Cookie access = registration.getResponse().getCookie("lp_access");
+        mockMvc.perform(post("/api/v1/staff/catalog/categories").with(csrf()).cookie(access)
+                .contentType("application/json").content("{\"name\":\"Forbidden Category\"}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void managerCanCreateCategoryAndItAppearsInPublicCatalog() throws Exception {
+        String email = "catalog-manager-" + UUID.randomUUID() + "@example.invalid";
+        MvcResult registration = mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                .contentType("application/json")
+                .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Catalog\"}"))
+            .andExpect(status().isOk()).andReturn();
+        Cookie access = registration.getResponse().getCookie("lp_access");
+        Long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?",Long.class,email);
+        jdbc.update("DELETE FROM user_roles WHERE user_id=?",userId);
+        jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='MANAGER'",userId);
+
+        String name = "Test Catalog " + UUID.randomUUID();
+        String slug = "test-catalog-" + UUID.randomUUID();
+        mockMvc.perform(post("/api/v1/staff/catalog/categories").with(csrf()).cookie(access)
+                .contentType("application/json")
+                .content("{\"name\":\"" + name + "\",\"slug\":\"" + slug + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.slug").value(slug));
+        mockMvc.perform(get("/api/v1/catalog/categories/" + slug))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.name").value(name));
+    }
+
+    @Test
+    void invalidSortAndPaginationAreRejected() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/products").param("sort","unsafe_sql"))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/catalog/products").param("page","-1"))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/catalog/products").param("size","101"))
+            .andExpect(status().isBadRequest());
+    }
+}
