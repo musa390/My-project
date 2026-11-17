@@ -345,7 +345,8 @@ public class CatalogController {
         List<Map<String,Object>> currentRows=jdbc.queryForList("SELECT quantity_on_hand,quantity_reserved FROM inventory WHERE variant_id=? FOR UPDATE",variantId);
         long oldOnHand=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("quantity_on_hand")).longValue();
         long oldReserved=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("quantity_reserved")).longValue();
-        long qty=number(body,"quantityOnHand",-1), reserved=number(body,"quantityReserved",oldReserved), reorder=number(body,"reorderLevel",0);
+        long oldReorder=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("reorder_level")).longValue();
+        long qty=number(body,"quantityOnHand",-1), reserved=number(body,"quantityReserved",oldReserved), reorder=number(body,"reorderLevel",oldReorder);
         if(qty<0||qty>4_294_967_295L||reserved<0||reserved>qty||reorder<0||reorder>4_294_967_295L) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid inventory quantities");
         long delta=qty-oldOnHand;
         if(delta<Integer.MIN_VALUE||delta>Integer.MAX_VALUE) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Inventory adjustment exceeds the movement ledger range");
