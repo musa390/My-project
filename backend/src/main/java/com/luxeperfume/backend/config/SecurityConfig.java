@@ -6,6 +6,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -54,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/staff/catalog/**").hasAnyAuthority("PERM_products.write", "PERM_catalog.write")
                 .requestMatchers("/api/v1/staff/products/**").hasAuthority("PERM_products.write")
                 .requestMatchers("/api/v1/staff/orders/**").hasAuthority("PERM_orders.write")
+                .requestMatchers(HttpMethod.GET, "/api/v1/staff/inventory/**").hasAuthority("PERM_inventory.read")
                 .requestMatchers("/api/v1/staff/inventory/**").hasAuthority("PERM_inventory.write")
                 .requestMatchers("/api/v1/staff/payments/**").hasAuthority("PERM_payments.read")
                 .requestMatchers("/api/v1/staff/**").hasAnyRole("ADMIN", "MANAGER", "INVENTORY_STAFF")

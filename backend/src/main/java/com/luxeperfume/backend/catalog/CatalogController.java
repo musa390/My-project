@@ -300,8 +300,9 @@ public class CatalogController {
             id,sku,name,optionsJson,body.get("volumeMl"),price,body.get("compareAtPrice"),body.get("costPrice"),body.get("weightGrams"),bool(body,"isDefault",false),bool(body,"isActive",true));
         Long variantId=jdbc.queryForObject("SELECT id FROM product_variants WHERE sku=?",Long.class,sku);
         long initialStock=number(body,"initialStock",0), reorderLevel=number(body,"reorderLevel",0);
-        if(initialStock<0||reorderLevel<0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Initial stock and reorder level cannot be negative");
+        if(initialStock<0||initialStock>Integer.MAX_VALUE||reorderLevel<0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Initial stock or reorder level is outside the supported range");
         jdbc.update("INSERT INTO inventory(variant_id,quantity_on_hand,quantity_reserved,reorder_level) VALUES(?,?,0,?)",variantId,initialStock,reorderLevel);
+        if(initialStock>0) jdbc.update("INSERT INTO inventory_movements(variant_id,movement_type,quantity_change,reference_type,note) VALUES(?,'RECEIPT',?,'VARIANT_CREATE','Initial variant stock')",variantId,initialStock);
         return ApiResponse.success("Variant created",one("SELECT v.*,i.quantity_on_hand,i.quantity_reserved,i.reorder_level FROM product_variants v JOIN inventory i ON i.variant_id=v.id WHERE v.id=?",variantId));
     }
     @Transactional
@@ -340,10 +341,17 @@ public class CatalogController {
     @PutMapping("/api/v1/staff/catalog/variants/{variantId}/inventory")
     @PreAuthorize("hasAuthority('PERM_inventory.write')")
     public ApiResponse<Map<String,Object>> updateInventory(@PathVariable long variantId,@RequestBody Map<String,Object> body) {
-        one("SELECT id FROM product_variants WHERE id=?",variantId);
-        long qty=number(body,"quantityOnHand",-1), reserved=number(body,"quantityReserved",0), reorder=number(body,"reorderLevel",0);
-        if(qty<0||reserved<0||reserved>qty||reorder<0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid inventory quantities");
+        one("SELECT id FROM product_variants WHERE id=? FOR UPDATE",variantId);
+        List<Map<String,Object>> currentRows=jdbc.queryForList("SELECT quantity_on_hand,quantity_reserved,reorder_level FROM inventory WHERE variant_id=? FOR UPDATE",variantId);
+        long oldOnHand=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("quantity_on_hand")).longValue();
+        long oldReserved=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("quantity_reserved")).longValue();
+        long oldReorder=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("reorder_level")).longValue();
+        long qty=number(body,"quantityOnHand",-1), reserved=number(body,"quantityReserved",oldReserved), reorder=number(body,"reorderLevel",oldReorder);
+        if(qty<0||qty>4_294_967_295L||reserved<0||reserved>qty||reorder<0||reorder>4_294_967_295L) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid inventory quantities");
+        long delta=qty-oldOnHand;
+        if(delta<Integer.MIN_VALUE||delta>Integer.MAX_VALUE) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Inventory adjustment exceeds the movement ledger range");
         jdbc.update("INSERT INTO inventory(variant_id,quantity_on_hand,quantity_reserved,reorder_level) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE quantity_on_hand=VALUES(quantity_on_hand),quantity_reserved=VALUES(quantity_reserved),reorder_level=VALUES(reorder_level)",variantId,qty,reserved,reorder);
+        if(delta!=0) jdbc.update("INSERT INTO inventory_movements(variant_id,movement_type,quantity_change,reference_type,note) VALUES(?,'ADJUSTMENT',?,'MANUAL_UPDATE','Staff inventory update')",variantId,(int)delta);
         return ApiResponse.success("Inventory updated",one("SELECT * FROM inventory WHERE variant_id=?",variantId));
     }
 
