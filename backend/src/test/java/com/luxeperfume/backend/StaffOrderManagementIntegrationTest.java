@@ -143,6 +143,28 @@ class StaffOrderManagementIntegrationTest {
             .andExpect(status().isForbidden());
     }
 
+    @Test
+    @Transactional
+    void orderWritePermissionDoesNotRequireReadPermission() throws Exception {
+        Session manager = register("staff-order-writeonly");
+        long roleId = roleId("MANAGER");
+        long readPermissionId = jdbc.queryForObject(
+                "SELECT id FROM permissions WHERE code='orders.read'", Long.class);
+        jdbc.update("INSERT INTO user_roles(user_id,role_id) VALUES(?,?)", manager.userId(), roleId);
+        jdbc.update("DELETE FROM role_permissions WHERE role_id=? AND permission_id=?",
+                roleId, readPermissionId);
+        String orderNumber = placeOrder(manager, 1);
+
+        mockMvc.perform(get("/api/v1/staff/orders").cookie(manager.access()))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/v1/staff/orders/" + orderNumber + "/status")
+                .with(csrf()).cookie(manager.access()).contentType("application/json")
+                .content("{\\"status\\":\\"CONFIRMED\\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.orderStatus").value("CONFIRMED"));
+    }
+
     private String placeOrder(Session customer, int quantity) throws Exception {
         long variantId = createVariant(new BigDecimal("725.00"), 10);
         jdbc.update("INSERT INTO carts(user_id,cart_status,currency) VALUES(?,'ACTIVE','BDT')", customer.userId());
