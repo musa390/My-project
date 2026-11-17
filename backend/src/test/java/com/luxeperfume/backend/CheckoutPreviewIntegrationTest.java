@@ -57,7 +57,7 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content("{\"addressId\":" + addressId + ",\"couponCode\":\"FIX-" + couponId + "\"}"))
+                .content("{\\"addressId\\":" + addressId + ",\\"couponCode\\":\\"" + couponCode + "\\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(1400))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(250))
@@ -92,7 +92,7 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content("{\"addressId\":" + addressId + ",\"couponCode\":\"FIX-" + couponId + "\"}"))
+                .content("{\\"addressId\\":" + addressId + ",\\"couponCode\\":\\"" + couponCode + "\\"}"))
             .andExpect(status().isUnprocessableEntity());
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf())
