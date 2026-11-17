@@ -1,12 +1,12 @@
 # Changelog
 
-## 2026-11-17 — Phase 4 started: database design and migrations
-- Designed a normalized MySQL 8.4 schema with 30 tables, 37 foreign-key relationships, indexes and integrity constraints.
-- Added Flyway-compatible V1 schema and V2 development seed migrations.
-- Added ERD, entity catalogue, data rules, MySQL setup instructions and SQL verification script.
-- Updated project status, master plan and handoff.
-- Local MySQL execution/verification remains pending; Phase 4 is not yet marked complete.
-- No customer-frontend or admin-frontend source files were changed.
+## 2026-11-17 — Phase 4 completed (100%)
+- Finalized normalized MySQL 8.4 schema: 30 tables, 37 foreign-key relationships and 38 CHECK constraints.
+- Added ERD, schema documentation, Flyway-compatible V1/V2 migrations and illustrative sample data.
+- Added MySQL verification SQL and GitHub Actions database migration CI.
+- GitHub Actions run 44094846967 succeeded: MySQL service healthy, V1 and V2 applied, verification step passed.
+- Added Phase 4 final report and updated project status, master plan and handoff.
+- Customer and Admin frontend source files were not changed.
 
 ## 2026-11-17 — Phase 3 completed (100%)
 - Owner-provided local Admin typecheck, lint and production build passed.
