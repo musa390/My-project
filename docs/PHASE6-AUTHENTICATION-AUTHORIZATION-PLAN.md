@@ -1,6 +1,6 @@
 # Phase 6 — Authentication & Authorization
 
-**Status:** Started — architecture and implementation plan  
+**Status:** Implementation in progress — backend authentication APIs and initial security tests added  
 **Working branch:** `phase6/authentication-authorization`  
 **Base branch:** `phase5/backend-foundation`  
 **Scope:** Customer, Admin and Staff identity, authentication, sessions, permissions and protected API routes.
@@ -72,6 +72,25 @@
 - Run Maven verification against MySQL 8.4 in CI.
 - Document local setup, environment variables, API contracts and owner-run verification.
 - Keep Customer Website and Admin Frontend source trees unchanged unless the owner explicitly authorizes frontend integration.
+
+## Implemented API contract (current branch)
+- `GET /api/v1/auth/csrf` — obtain the CSRF token before cookie-authenticated POST requests.
+- `POST /api/v1/auth/register` — create a CUSTOMER account and issue access/refresh cookies.
+- `POST /api/v1/auth/login` — authenticate a local account and issue cookies.
+- `POST /api/v1/auth/refresh` — rotate the refresh token and issue a new access token.
+- `POST /api/v1/auth/logout` — revoke the refresh session and clear both cookies.
+- `POST /api/v1/auth/forgot-password` — generic response; sends a single-use reset link when Resend is configured.
+- `POST /api/v1/auth/reset-password` — consume a valid reset token, change the password and revoke all sessions.
+- Google OIDC is opt-in via the `google` Spring profile and requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Register the exact callback URL `{BACKEND_BASE_URL}/login/oauth2/code/google` in Google Cloud Console.
+- Admin routes use ADMIN role; staff routes apply role and permission-specific rules.
+- Browser clients must first call the CSRF endpoint, retain the CSRF cookie and send its value in `X-XSRF-TOKEN` on unsafe requests. Cookies are HttpOnly; auth tokens must not be copied into browser storage.
+
+### Local provider setup
+1. Copy root `.env.example` to `.env`; never commit `.env`.
+2. Generate a unique JWT signing secret for the environment and set `JWT_SECRET_BASE64`; the checked-in fallback is development-only.
+3. For secure deployment set `AUTH_COOKIE_SECURE=true` and use HTTPS.
+4. Set `RESEND_API_KEY` and a verified `AUTH_EMAIL_FROM` to enable reset email delivery.
+5. For Google sign-in set `SPRING_PROFILES_ACTIVE=google`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `AUTH_OAUTH_SUCCESS_REDIRECT`; configure the matching authorized redirect URI with Google.
 
 ## Acceptance criteria
 
