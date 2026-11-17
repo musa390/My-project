@@ -9,9 +9,9 @@ Build a complete full-stack perfume e-commerce platform while preserving the exi
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Project audit and planning | Complete |
-| 1 | Root setup, separate app/service folders, documentation and GitHub workflow | In progress |
-| 2 | Customer frontend finalization and verification | Pending / existing storefront baseline audited; original storefront Phase 6 verification remains incomplete |
-| 3 | Separate Admin frontend | Pending |
+| 1 | Root setup, separate app/service folders, documentation and GitHub workflow | Complete |
+| 2 | Customer frontend finalization and verification | Complete — 100% |
+| 3 | Separate Admin frontend | Ready to start |
 | 4 | MySQL database design and ERD | Pending |
 | 5 | Spring Boot backend foundation | Pending |
 | 6 | Authentication and authorization | Pending |
@@ -25,6 +25,10 @@ Build a complete full-stack perfume e-commerce platform while preserving the exi
 | 14 | Testing, security and QA | Pending |
 | 15 | Deployment and GitHub release | Pending |
 
+## Phase 2 completion note
+
+The Customer Frontend Phase 2 scope is complete. The project owner confirmed the static verification script, TypeScript typecheck, lint, production build and browser QA all passed. See `docs/PHASE2-CUSTOMER-FRONTEND-REPORT.md` for the scope, evidence qualification and remaining boundaries. Login/Register and Google sign-in remain demo UI; backend authentication, persistent data and live payments are not included in Phase 2.
+
 ## Core decisions
 
 - Customer and Admin are separate Next.js applications.
@@ -34,6 +38,10 @@ Build a complete full-stack perfume e-commerce platform while preserving the exi
 - Payment: COD plus provider sandbox/demo environments only until production use is explicitly approved. Verify payment status server-side.
 - Authentication: secure server-managed cookies/session or a carefully specified JWT cookie design; never store authentication tokens in LocalStorage.
 - Secrets: environment variables only; `.env` is ignored by Git.
+
+## Phase 3 protection rule
+
+Phase 3 develops only the separate `admin-frontend/` application and its documentation. Do not modify `customer-frontend/` without explicit approval.
 
 ## Completion rule
 
