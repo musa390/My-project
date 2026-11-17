@@ -86,7 +86,7 @@ public class CatalogController {
                    COALESCE(i.quantity_reserved,0) quantity_reserved,
                    GREATEST(COALESCE(i.quantity_on_hand,0)-COALESCE(i.quantity_reserved,0),0) available_quantity
             FROM product_variants v LEFT JOIN inventory i ON i.variant_id=v.id
-            WHERE v.product_id=? ORDER BY v.is_default DESC,v.id
+            WHERE v.product_id=? AND v.is_active=TRUE ORDER BY v.is_default DESC,v.id
             """, id));
         return product;
     }
@@ -111,8 +111,17 @@ public class CatalogController {
         if (category != null && !category.isBlank()) { where.append(" AND c.slug=?"); args.add(category); }
         if (brand != null && !brand.isBlank()) { where.append(" AND b.slug=?"); args.add(brand); }
         if (collection != null && !collection.isBlank()) { where.append(" AND EXISTS(SELECT 1 FROM collection_products cp JOIN collections co ON co.id=cp.collection_id WHERE cp.product_id=p.id AND co.slug=? AND co.is_active=TRUE)"); args.add(collection); }
-        if (minPrice != null) { where.append(" AND EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE AND v.price>=?)"); args.add(minPrice); }
-        if (maxPrice != null) { where.append(" AND EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE AND v.price<=?)"); args.add(maxPrice); }
+        if (minPrice != null && minPrice.signum() < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"minPrice cannot be negative");
+        if (maxPrice != null && maxPrice.signum() < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"maxPrice cannot be negative");
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"minPrice cannot exceed maxPrice");
+        if (minPrice != null && maxPrice != null) {
+            where.append(" AND EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE AND v.price BETWEEN ? AND ?)");
+            args.add(minPrice); args.add(maxPrice);
+        } else if (minPrice != null) {
+            where.append(" AND EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE AND v.price>=?)"); args.add(minPrice);
+        } else if (maxPrice != null) {
+            where.append(" AND EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE AND v.price<=?)"); args.add(maxPrice);
+        }
         if (Boolean.TRUE.equals(inStock)) where.append(" AND EXISTS(SELECT 1 FROM product_variants v JOIN inventory i ON i.variant_id=v.id WHERE v.product_id=p.id AND v.is_active=TRUE AND i.quantity_on_hand>i.quantity_reserved)");
         if (Boolean.FALSE.equals(inStock)) where.append(" AND NOT EXISTS(SELECT 1 FROM product_variants v JOIN inventory i ON i.variant_id=v.id WHERE v.product_id=p.id AND v.is_active=TRUE AND i.quantity_on_hand>i.quantity_reserved)");
         if (featured != null) { where.append(" AND p.is_featured=?"); args.add(featured); }
