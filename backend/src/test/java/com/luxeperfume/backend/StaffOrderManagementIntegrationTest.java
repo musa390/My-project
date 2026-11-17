@@ -160,7 +160,7 @@ class StaffOrderManagementIntegrationTest {
 
         mockMvc.perform(patch("/api/v1/staff/orders/" + orderNumber + "/status")
                 .with(csrf()).cookie(manager.access()).contentType("application/json")
-                .content("{\\"status\\":\\"CONFIRMED\\"}"))
+                .content("{\"status\":\"CONFIRMED\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.orderStatus").value("CONFIRMED"));
     }
