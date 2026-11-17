@@ -36,6 +36,12 @@ management:
       probes:
         enabled: true
 app:
+  checkout:
+    # Explicit development defaults; set these server-side for the real delivery/tax policy.
+    shipping:
+      flat-rate: ${CHECKOUT_SHIPPING_FLAT_RATE:0.00}
+    tax:
+      percentage: ${CHECKOUT_TAX_PERCENTAGE:0.00}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
   security:

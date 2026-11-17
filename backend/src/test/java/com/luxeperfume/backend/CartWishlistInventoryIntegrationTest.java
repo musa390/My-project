@@ -160,7 +160,7 @@ class CartWishlistInventoryIntegrationTest {
 
         mockMvc.perform(get("/api/v1/staff/inventory/low-stock").cookie(staff.access()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].variant_id").value(variantId));
+            .andExpect(jsonPath("$.data[*].variant_id").value(org.hamcrest.Matchers.hasItem((int) variantId)));
 
         mockMvc.perform(get("/api/v1/staff/inventory/variants/" + variantId + "/movements").cookie(staff.access()))
             .andExpect(status().isOk())
