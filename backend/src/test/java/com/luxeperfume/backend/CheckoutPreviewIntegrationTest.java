@@ -105,8 +105,8 @@ class CheckoutPreviewIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(1500))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(100))
-            .andExpect(jsonPath("$.data.items[?(@.variantId == " + eligibleVariant + ")].lineDiscount").value(100))
-            .andExpect(jsonPath("$.data.items[?(@.variantId == " + otherVariant + ")].lineDiscount").value(0));
+            .andExpect(jsonPath("$.data.items[0].lineDiscount").value(100))
+            .andExpect(jsonPath("$.data.items[1].lineDiscount").value(0));
     }
 
     @Test
