@@ -133,6 +133,9 @@ class StaffOrderManagementIntegrationTest {
         jdbc.update("INSERT INTO user_roles(user_id,role_id) VALUES(?,?)", staff.userId(), roleId);
         jdbc.update("DELETE FROM role_permissions WHERE role_id=? AND permission_id=?", roleId, permissionId);
         String orderNumber = placeOrder(staff, 1);
+        // Remove the customer's generic read permission so this verifies the MANAGER read grant.
+        jdbc.update("DELETE FROM user_roles WHERE user_id=? AND role_id=?",
+                staff.userId(), roleId("CUSTOMER"));
 
         mockMvc.perform(get("/api/v1/staff/orders").cookie(staff.access()))
             .andExpect(status().isOk());
