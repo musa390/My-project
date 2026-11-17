@@ -1,6 +1,6 @@
 # Phase 10 — Payment Integration Plan
 
-**Status:** Step 1 audit complete; implementation has not started. No gateway calls or payment-state mutations have been implemented.
+**Status:** Step 1 audit complete. Step 2 Java OOP/domain foundation and Flyway V4 draft committed; awaiting CI and MySQL migration verification. No live gateway integration is active.
 **Working branch:** `phase10/payment-integration`
 **Base:** `phase9/checkout-order-management`
 **Previous work:** Phase 9 Draft PR #6 remains open, draft and unmerged.
@@ -130,3 +130,19 @@ The owner explicitly approved changing the existing payment table. The implement
 - Add separate `payment_refunds` and `payment_events` tables for refund lifecycle and callback/event audit, with foreign keys back to the existing `payments` rows.
 - Do not create a second table named `payments`, do not drop/rename/replace the existing table, and do not edit V1/V2/V3.
 - Before committing V4, define nullable/backfill-safe columns, provider-specific unique constraints, duplicate callback handling and MySQL 8.4 integration tests. Existing payment history must remain readable.
+
+
+## Owner authorization and implementation checkpoint — 18 November 2026
+
+The owner explicitly authorized creating or modifying payment schema as needed. The selected safe design retains the original V1 `payments` table and extends it through V4; no parallel `payments` table is created.
+
+### Step 2 initial implementation committed
+
+- Added `PaymentProvider` and `PaymentStatus` enums.
+- Added an encapsulated `Payment` domain object with positive-amount/currency invariants.
+- Added `PaymentStatusTransitionPolicy` to reject invalid/terminal state changes, including PAID → FAILED.
+- Added the `PaymentGateway` abstraction with typed initiation and server-verification contracts.
+- Added initial unit tests for status transitions and domain validation.
+- Added Flyway V4 to ALTER the existing `payments` table with merchant reference, idempotency key, verification timestamp and optimistic version; added `payment_refunds` and `payment_events` audit tables.
+- V4 is committed but not yet accepted as verified: MySQL 8.4 migration execution and full Maven tests must pass before proceeding.
+- No provider adapters, COD endpoints, callbacks, refund service, live/sandbox HTTP calls or frontend changes have been implemented at this checkpoint.
