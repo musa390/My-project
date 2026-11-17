@@ -81,7 +81,7 @@ erDiagram
 - Archive products/variants instead of deleting referenced historical records.
 
 ## Migration set
-1. V1__create_core_schema.sql — 29 relational tables, indexes, 32 foreign keys/check constraints and initial RBAC permission catalog. No account is created.
+1. V1__create_core_schema.sql — 29 relational tables, indexes, 35 foreign keys/check constraints and initial RBAC permission catalog. No account is created.
 2. V2__insert_development_sample_data.sql — demo brand, categories, products, variants, images, inventory, collection, coupon, banner and newsletter sample.
 
 Once applied in a shared database, migrations are immutable. Add V3+ for future changes. Flyway Maven dependency and Spring Boot startup integration are Phase 5.
