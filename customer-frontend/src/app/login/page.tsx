@@ -1,4 +1,12 @@
 import type { Metadata } from "next";
-export const metadata: Metadata = { title: 'Google Sign-In Setup', robots: { index: false, follow: false }, description: 'Google sign-in is not enabled in this frontend-only demo.' };
-import {LoginPage} from '@/components/store';
-export default function Page(){return <LoginPage/>;}
+import { LoginPage } from "@/components/store";
+
+export const metadata: Metadata = {
+  title: "Sign In",
+  description: "Sign-in interface for the LUXE Parfums frontend demo.",
+  robots: { index: false, follow: false },
+};
+
+export default function Page() {
+  return <LoginPage />;
+}

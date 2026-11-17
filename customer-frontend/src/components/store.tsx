@@ -277,9 +277,53 @@ export function FaqPage(){const items=[
  ["How can I track an order?","Use the demo order reference and checkout phone number on the Track Order page. The six-stage timeline is illustrative and does not connect to a courier."]
  ];return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">HELP & SUPPORT</span><h1>Frequently Asked <em>Questions</em></h1><p>Helpful information about the LUXE demo storefront.</p></div>{items.map(([q,a])=><details className="faq-item" key={q}><summary>{q}<Plus size={17}/></summary><p>{a}</p></details>)}</main>}
 const OAUTH_READY=false; // Enable only after a secure server-side Google OAuth provider is configured.
-export function LoginPage(){
- return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">YOUR LUXE ACCOUNT</span><h1>Welcome <em>Back</em></h1><p>Sign in securely to access your profile and order history.</p></div><div className="form-panel"><h2>Continue with Google</h2><button className="outline-btn wide" type="button" disabled={!OAUTH_READY} aria-disabled={!OAUTH_READY}>G&nbsp; CONTINUE WITH GOOGLE</button><div className="demo-notice"><b>Google sign-in is not configured yet.</b><p>This button is intentionally disabled. No fake login, demo credentials, client-side authentication, OAuth API route, or backend is included in this frontend-only project.</p></div><p className="muted small">You can still browse products, manage your wishlist and place demo orders without signing in. Demo order history is stored only in this browser.</p><Link className="continue-link" href="/account">View account profile UI <ArrowRight size={14}/></Link><Link className="continue-link" href="/my-orders">View demo order history <ArrowRight size={14}/></Link></div></main>;
+export function AuthPage({mode}:{mode:"login"|"register"}){
+ const [message,setMessage]=useState("");
+ const [messageError,setMessageError]=useState(false);
+ const isRegister=mode==="register";
+ function submit(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();
+  setMessage("");
+  setMessageError(false);
+  const form=e.currentTarget;
+  if(!form.reportValidity())return;
+  const data=new FormData(form);
+  if(isRegister&&String(data.get("password")||"")!==String(data.get("confirmPassword")||"")){
+   setMessage("The passwords do not match. Please check both fields.");
+   setMessageError(true);
+   return;
+  }
+  setMessage(isRegister
+   ?"The registration form is valid, but account creation is not connected yet. No account or password was saved."
+   :"The sign-in form is valid, but authentication is not connected yet. No sign-in was attempted.");
+ }
+ return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">YOUR LUXE ACCOUNT</span><h1>{isRegister?<>Create Your <em>Account</em></>:<>Welcome <em>Back</em></>}</h1><p>{isRegister?"Create an account when the secure account service becomes available.":"Sign in when the secure account service becomes available."}</p></div><div className="form-panel">
+  <div role="group" aria-label="Account access options" style={{display:"flex",gap:10,justifyContent:"center",marginBottom:24,flexWrap:"wrap"}}>
+   <Link className={isRegister?"outline-btn":"gold-btn"} href="/login" aria-current={!isRegister?"page":undefined}>SIGN IN</Link>
+   <Link className={isRegister?"gold-btn":"outline-btn"} href="/register" aria-current={isRegister?"page":undefined}>CREATE ACCOUNT</Link>
+  </div>
+  <h2>{isRegister?"Register with email":"Sign in with email"}</h2>
+  <form className="form-grid" onSubmit={submit}>
+   {isRegister&&<label className="full">Full name *<input name="name" type="text" autoComplete="name" minLength={2} maxLength={80} required placeholder="Your full name"/></label>}
+   <label className="full">Email address *<input name="email" type="email" autoComplete="email" maxLength={254} required placeholder="you@example.com"/></label>
+   <label className="full">Password *<input name="password" type="password" autoComplete={isRegister?"new-password":"current-password"} minLength={8} maxLength={128} required placeholder="At least 8 characters"/></label>
+   {isRegister&&<label className="full">Confirm password *<input name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={128} required placeholder="Enter your password again"/></label>}
+   <div className="full"><button className="gold-btn" type="submit">{isRegister?"CHECK REGISTRATION FORM":"CHECK SIGN-IN FORM"} <ArrowRight size={14}/></button></div>
+  </form>
+  {message&&<p className={messageError?"form-error":"demo-notice"} role={messageError?"alert":"status"} aria-live="polite">{message}</p>}
+  <div className="demo-notice"><b>Frontend demo — no real authentication</b><p>These forms demonstrate the customer interface and basic browser validation only. No account is created, no password is stored or transmitted, and no customer is signed in. Secure authentication will be added with the backend phase.</p></div>
+  <div style={{marginTop:20,borderTop:"1px solid var(--line)",paddingTop:18}}>
+   <h2 style={{fontSize:20,marginBottom:12}}>Or continue with Google</h2>
+   <button className="outline-btn wide" type="button" disabled={!OAUTH_READY} aria-disabled={!OAUTH_READY}>G&nbsp; CONTINUE WITH GOOGLE</button>
+   <p className="muted small" style={{marginTop:12}}>Google sign-in is intentionally disabled until a secure server-side OAuth provider is configured.</p>
+  </div>
+  <p className="muted small" style={{marginTop:18}}>You can browse products, manage your wishlist and place demo orders without signing in. Demo order history is stored only in this browser.</p>
+  <Link className="continue-link" href="/account">View account profile UI <ArrowRight size={14}/></Link>
+  <Link className="continue-link" href="/my-orders">View demo order history <ArrowRight size={14}/></Link>
+ </div></main>;
 }
+export function LoginPage(){return <AuthPage mode="login"/>;}
+export function RegisterPage(){return <AuthPage mode="register"/>;}
 type SavedAddress = { id: string; label: string; name: string; phone: string; division: string; district: string; area: string; fullAddress: string; postalCode: string };
 type AccountProfile = { name: string; email: string; phone: string };
 const bdPhonePattern = /^(?:\+?880|0)1[3-9]\d{8}$/;
