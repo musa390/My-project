@@ -16,11 +16,16 @@ public class JwtService {
     private final SecretKey key;
     private final String issuer;
     private final long accessMinutes;
+    private static final String DEVELOPMENT_KEY = "VGhpc0lzRGV2ZWxvcG1lbnRPbmx5S2V5Rm9yTHV4ZVBlcmZ1bWVBdXRoIQ==";
 
     public JwtService(
             @Value("${app.security.jwt.secret-base64}") String secret,
             @Value("${app.security.jwt.issuer}") String issuer,
-            @Value("${app.security.jwt.access-minutes}") long accessMinutes) {
+            @Value("${app.security.jwt.access-minutes}") long accessMinutes,
+            @Value("${spring.profiles.active:}") String activeProfiles) {
+        if (activeProfiles.contains("prod") && DEVELOPMENT_KEY.equals(secret)) {
+            throw new IllegalStateException("Production must provide a unique JWT_SECRET_BASE64.");
+        }
         this.key = Keys.hmacShaKeyFor(io.jsonwebtoken.io.Decoders.BASE64.decode(secret));
         this.issuer = issuer;
         this.accessMinutes = accessMinutes;
@@ -33,6 +38,7 @@ public class JwtService {
                 .subject(Long.toString(userId))
                 .claim("sid", sessionId)
                 .claim("purpose", "access")
+                .audience().add("luxe-perfume-client").and()
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(accessMinutes * 60)))
                 .signWith(key)
@@ -41,6 +47,6 @@ public class JwtService {
 
     public Claims parse(String token) {
         return Jwts.parser().verifyWith(key).requireIssuer(issuer).build()
-                .parseSignedClaims(token).getPayload();
+                .requireAudience("luxe-perfume-client").parseSignedClaims(token).getPayload();
     }
 }
