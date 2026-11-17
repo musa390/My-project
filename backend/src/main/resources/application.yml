@@ -52,6 +52,7 @@ app:
     email:
       resend-api-key: ${RESEND_API_KEY:}
       from: ${AUTH_EMAIL_FROM:onboarding@resend.dev}
+    oauth-success-redirect: ${AUTH_OAUTH_SUCCESS_REDIRECT:http://localhost:3000/account}
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
