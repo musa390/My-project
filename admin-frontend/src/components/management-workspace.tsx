@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Plus, Download, Pencil, Trash2, X, Check, Filter } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, X, Check, Filter } from "lucide-react";
 
 type Row = { id: string; name: string; detail: string; status: string; value: string };
 type Module = { title: string; description: string; columns: string[]; rows: Row[]; fields: string[]; statuses: string[] };
