@@ -1,0 +1,90 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "LUXE: Install dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "LUXE: Typecheck",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "LUXE: Phase 6 static verification",
+      "type": "shell",
+      "command": "npm run verify:phase6",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "LUXE: Lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "LUXE: Build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "LUXE: Production server",
+      "type": "shell",
+      "command": "npm run start -- --hostname 127.0.0.1 --port 3187",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "luxe-next-production",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Starting\\.\\.\\.",
+          "endsPattern": ".*Ready in .*"
+        }
+      }
+    },
+    {
+      "label": "LUXE: Dev server",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "luxe-next-dev",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": ".*Ready in .*"
+        }
+      }
+    }
+  ]
+}
