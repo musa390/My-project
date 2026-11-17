@@ -7,6 +7,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.servlet.http.Cookie;
+import org.springframework.test.web.servlet.MvcResult;
 import java.util.UUID;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -87,6 +89,45 @@ class BackendFoundationIntegrationTest {
         String hash = jdbc.queryForObject("SELECT password_hash FROM users WHERE email=?", String.class, email);
         assertThat(hash).isNotNull().startsWith("$2");
         assertThat(hash).isNotEqualTo("StrongPassphrase123!");
+    }
+
+    @Test
+    void refreshRotatesTokenAndLogoutRevokesSession() throws Exception {
+        String email = "session-" + UUID.randomUUID() + "@example.invalid";
+        MvcResult registration = mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Session\"}"))
+                .andExpect(status().isOk()).andReturn();
+        Cookie initialRefresh = registration.getResponse().getCookie("lp_refresh");
+        assertThat(initialRefresh).isNotNull();
+        assertThat(registration.getResponse().getCookie("lp_access").isHttpOnly()).isTrue();
+
+        MvcResult refreshed = mockMvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(initialRefresh))
+                .andExpect(status().isOk()).andReturn();
+        Cookie rotatedRefresh = refreshed.getResponse().getCookie("lp_refresh");
+        assertThat(rotatedRefresh).isNotNull();
+        assertThat(rotatedRefresh.getValue()).isNotEqualTo(initialRefresh.getValue());
+
+        mockMvc.perform(post("/api/v1/auth/logout").with(csrf()).cookie(rotatedRefresh))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/auth/refresh").with(csrf()).cookie(rotatedRefresh))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void forgotPasswordUsesSamePublicResponseForKnownAndUnknownEmails() throws Exception {
+        String email = "reset-" + UUID.randomUUID() + "@example.invalid";
+        mockMvc.perform(post("/api/v1/auth/register").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"email\":\"" + email + "\",\"password\":\"StrongPassphrase123!\",\"firstName\":\"Reset\"}"))
+                .andExpect(status().isOk());
+        String known = mockMvc.perform(post("/api/v1/auth/forgot-password").with(csrf())
+                        .contentType("application/json").content("{\"email\":\"" + email + "\"}"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        String unknown = mockMvc.perform(post("/api/v1/auth/forgot-password").with(csrf())
+                        .contentType("application/json").content("{\"email\":\"unknown-" + UUID.randomUUID() + "@example.invalid\"}"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        assertThat(known).isEqualTo(unknown);
     }
 
     @Test
