@@ -35,18 +35,21 @@ The environment script reads root `.env` into this PowerShell session without pr
 - OpenAPI JSON: http://localhost:8080/v3/api-docs
 
 ## Flyway migration policy
-Flyway applies the existing Phase 4 migrations on startup:
+Flyway applies the current Phase 4 schema and development seed:
 - `V1__create_core_schema.sql`
 - `V2__insert_development_sample_data.sql`
 
-Do not edit migrations that have already been applied. Future schema changes must be new versioned migrations (starting with V3). Hibernate schema generation is disabled; Hibernate validates mapped entities rather than creating or changing tables.
+The generated columns used alongside cascading foreign keys are VIRTUAL for MySQL 8.4 compatibility. The CI database is disposable. If your local database already recorded an earlier V1 checksum, stop and reconcile the Flyway history before starting the updated backend; do not drop the database or erase data. Hibernate schema generation is disabled; Hibernate validates mapped entities rather than creating or changing tables. Future schema changes should use new versioned migrations.
 
 ## Layered architecture
 - `config`: CORS and OpenAPI configuration
 - `common/controller`: shared endpoints such as health
 - `common/dto`: standard success and error response records
 - `common/entity`: shared JPA mapped superclass
+- `common/repository`: reusable Spring Data JPA repository base
+- `common/service`: CRUD service contract and transactional abstract implementation
 - `common/exception`: centralized API exception handling
-- Future domain packages will use controller → service → repository → entity separation.
+
+Domain-specific controllers, services, repositories and entities will be added in the corresponding feature phases.
 
 Authentication, customer/product business endpoints, payment processing and real customer data are not implemented in this foundation phase.
