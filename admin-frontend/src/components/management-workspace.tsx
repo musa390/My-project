@@ -32,12 +32,15 @@ export function ManagementWorkspace({section}:{section:string}) {
  const [rows,setRows]=useState<Row[]>(config?.rows ?? []);
  const [query,setQuery]=useState("");
  const [status,setStatus]=useState("All statuses");
- const [adding,setAdding]=useState(false);\n const [editing,setEditing]=useState<string|null>(null);
+ const [adding,setAdding]=useState(false);
+ const [editing,setEditing]=useState<string|null>(null);
  const [draft,setDraft]=useState(["","",""]);
  const [notice,setNotice]=useState("");
  const filtered=useMemo(()=>rows.filter(r=>(status==="All statuses"||r.status===status)&&Object.values(r).join(" ").toLowerCase().includes(query.toLowerCase())),[rows,query,status]);
  if(!config) return <section className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-8"><p className="text-xs uppercase tracking-[.2em] text-[var(--gold)]">Admin workspace</p><h1 className="mt-3 text-2xl font-semibold">Page not found</h1><p className="mt-2 text-sm text-[var(--muted)]">This admin section does not exist.</p></section>;
- const addRow=()=>{if(!draft[0].trim())return;const next:Row={id:"DM-"+String(Date.now()).slice(-5),name:draft[0],detail:draft[1]||"Demo entry",status:config.statuses[0],value:draft[2]||"—"};setRows(current=>[next,...current]);setDraft(["","",""]);setAdding(false);setNotice("Demo record added in this browser session only.");};\n const saveEdit=()=>{if(!editing||!draft[0].trim())return;setRows(current=>current.map(r=>r.id===editing?{...r,name:draft[0],detail:draft[1]||r.detail,value:draft[2]||r.value}:r));setEditing(null);setDraft(["","",""]);setNotice("Demo record updated in this temporary view.");};\n const startEdit=(row:Row)=>{setEditing(row.id);setAdding(false);setDraft([row.name,row.detail,row.value]);};
+ const addRow=()=>{if(!draft[0].trim())return;const next:Row={id:"DM-"+String(Date.now()).slice(-5),name:draft[0],detail:draft[1]||"Demo entry",status:config.statuses[0],value:draft[2]||"—"};setRows(current=>[next,...current]);setDraft(["","",""]);setAdding(false);setNotice("Demo record added in this browser session only.");};
+ const saveEdit=()=>{if(!editing||!draft[0].trim())return;setRows(current=>current.map(r=>r.id===editing?{...r,name:draft[0],detail:draft[1]||r.detail,value:draft[2]||r.value}:r));setEditing(null);setDraft(["","",""]);setNotice("Demo record updated in this temporary view.");};
+ const startEdit=(row:Row)=>{setEditing(row.id);setAdding(false);setDraft([row.name,row.detail,row.value]);};
  const remove=(id:string)=>{setRows(current=>current.filter(r=>r.id!==id));setNotice("Demo record removed from this temporary view.");};
  const updateStatus=(id:string,next:string)=>{setRows(current=>current.map(r=>r.id===id?{...r,status:next}:r));setNotice("Demo status updated in this temporary view.");};
  return <div className="space-y-6">
