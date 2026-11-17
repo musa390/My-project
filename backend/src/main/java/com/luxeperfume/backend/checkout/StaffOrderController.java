@@ -17,7 +17,7 @@ import java.util.Map;
 @RestController
 @Validated
 @RequestMapping("/api/v1/staff/orders")
-@PreAuthorize("hasAnyRole('ADMIN','MANAGER') and hasAuthority('PERM_orders.read')")
+@PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
 public class StaffOrderController {
     private final StaffOrderApplicationService orders;
 
@@ -26,6 +26,7 @@ public class StaffOrderController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PERM_orders.read')")
     public ApiResponse<Map<String, Object>> search(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String paymentStatus,
@@ -37,6 +38,7 @@ public class StaffOrderController {
     }
 
     @GetMapping("/{orderNumber}")
+    @PreAuthorize("hasAuthority('PERM_orders.read')")
     public ApiResponse<Map<String, Object>> detail(@PathVariable String orderNumber) {
         return ApiResponse.success("Order details retrieved", orders.detail(orderNumber));
     }
