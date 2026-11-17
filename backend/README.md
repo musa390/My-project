@@ -1,5 +1,7 @@
-# Backend — Planned Scaffold
+# Backend — Spring Boot (Phase 5)
 
-Reserved for the Java + Spring Boot REST API (Maven, Spring Security, Spring Data JPA, Hibernate, validation and OpenAPI).
+Backend implementation is not started. Phase 4 adds Flyway-compatible SQL migrations:
+- src/main/resources/db/migration/V1__create_core_schema.sql
+- src/main/resources/db/migration/V2__insert_development_sample_data.sql
 
-**Status:** Not implemented. Backend initialization is planned for Full-Stack Phase 5. Business logic must remain server-side; do not place backend secrets or business rules in either frontend.
+Phase 5 will add Maven/Spring Boot and Flyway dependency/configuration, then validate migration execution on application startup. See ../database/README.md and ../docs/DATABASE_DESIGN.md. Never commit credentials. No default admin user is seeded.
