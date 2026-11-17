@@ -85,7 +85,7 @@ class CustomerOrderManagementIntegrationTest {
                 """, Integer.class, variantId, orderId)).isEqualTo(1);
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM order_status_history
-                WHERE order_id=? AND from_status='PENDING' AND toStatus='CANCELLED'
+                WHERE order_id=? AND from_status='PENDING' AND to_status='CANCELLED'
                 """, Integer.class, orderId)).isEqualTo(1);
 
         mockMvc.perform(post("/api/v1/orders/" + orderNumber + "/cancel")
