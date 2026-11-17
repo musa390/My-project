@@ -242,6 +242,7 @@ public class CatalogController {
         String type=text(body,"productType","STANDARD").toUpperCase(Locale.ROOT);
         String status=text(body,"status","DRAFT").toUpperCase(Locale.ROOT);
         if(!Set.of("STANDARD","VARIABLE").contains(type)||!Set.of("DRAFT","ACTIVE","ARCHIVED").contains(status)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid product type or status");
+        if("ACTIVE".equals(status)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Create the product as DRAFT, add an active variant, then publish it");
         Long brandId=body.get("brandId")==null?null:number(body,"brandId",0);
         jdbc.update("INSERT INTO products(category_id,brand_id,name,slug,short_description,description,product_type,status,is_featured,seo_title,seo_description) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
             categoryId,brandId,name,productSlug,text(body,"shortDescription",null),text(body,"description",null),type,status,bool(body,"featured",false),text(body,"seoTitle",null),text(body,"seoDescription",null));
@@ -260,6 +261,10 @@ public class CatalogController {
         String type=text(body,"productType",String.valueOf(current.get("product_type"))).toUpperCase(Locale.ROOT);
         String status=text(body,"status",String.valueOf(current.get("status"))).toUpperCase(Locale.ROOT);
         if(!Set.of("STANDARD","VARIABLE").contains(type)||!Set.of("DRAFT","ACTIVE","ARCHIVED").contains(status)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid product type or status");
+        if("ACTIVE".equals(status)) {
+            Integer activeVariants=jdbc.queryForObject("SELECT COUNT(*) FROM product_variants WHERE product_id=? AND is_active=TRUE",Integer.class,id);
+            if(activeVariants==null||activeVariants==0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"An active product must have at least one active variant");
+        }
         jdbc.update("UPDATE products SET category_id=?,brand_id=?,name=?,slug=?,short_description=?,description=?,product_type=?,status=?,is_featured=?,seo_title=?,seo_description=? WHERE id=?",
             categoryId,brandId,name,productSlug,text(body,"shortDescription",(String)current.get("short_description")),text(body,"description",(String)current.get("description")),type,status,bool(body,"featured",Boolean.TRUE.equals(current.get("is_featured"))),text(body,"seoTitle",(String)current.get("seo_title")),text(body,"seoDescription",(String)current.get("seo_description")),id);
         return ApiResponse.success("Product updated",productView(id));
