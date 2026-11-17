@@ -42,6 +42,10 @@ A signed-in Customer can create an order from their saved cart and owned deliver
 14. Staff status transitions must be authorized, validated, audited with actor and note, and must not silently alter payment status. Payment collection/refunds belong to Phase 10.
 15. Scope every customer read/cancel query by the authenticated customer. Staff access requires explicit order permissions.
 
+## Java 21 OOP requirement
+
+Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism in the checkout/order business logic. The concrete class/interface design, package structure, transaction boundary and OOP test expectations are documented in `PHASE9-JAVA-OOP-ARCHITECTURE.md`. This requirement applies to Phase 9 itself; it is not deferred to Phase 11.
+
 ## Implementation sequence
 
 - [x] Inspect existing address, cart, coupon, order, order-item, coupon-redemption and inventory schema plus auth principal conventions.
