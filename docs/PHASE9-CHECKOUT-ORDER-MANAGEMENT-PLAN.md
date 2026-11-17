@@ -1,6 +1,6 @@
 # Phase 9 — Checkout & Order Management Plan
 
-**Status:** Steps 1–4 runtime implementation committed; Step 3 GitHub Maven CI PASS. Step 4 automated CI verification is pending. Staff/Admin order management remains pending.
+**Status:** Steps 1–5 implementation committed; latest branch-head GitHub Actions Maven CI PASS (47 tests, 0 failures/errors/skips). Owner-local clean-database verification remains pending.
 **Branch:** `phase9/checkout-order-management`
 **Base:** `phase8/cart-wishlist-inventory`
 **Dependency:** Phase 8 persistent cart, catalog pricing, inventory and authentication APIs.
@@ -52,12 +52,12 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 - [x] Add DTO validation and server-side checkout quote/pricing/shipping/coupon services; Step 2 Maven CI PASS.
 - [x] Implement transactional order creation, stock reservation, coupon redemption, order snapshots and cart conversion; Step 3 Maven CI PASS.
 - [x] Implement customer history, detail, tracking and cancellation with transactional stock release.
-- [ ] Implement Staff/Admin order list/detail/status transitions and permission checks.
+- [x] Implement Staff/Admin order list/detail/status transitions and permission checks; staff-role boundary and read/write permissions regression-tested.
 - [x] Add Step 2/3 unit and MySQL integration tests for checkout validation, order snapshots, coupon redemption, stock reservation, stock rejection, duplicate submissions and cart conversion.
-- [x] Add Step 4 MySQL integration tests for customer-owned history/detail/tracking, foreign-order isolation, eligible cancellation, exactly-once stock release and shipped-order rejection. Latest Step 4 CI result is pending.
+- [x] Add Customer and Staff/Admin MySQL integration tests for ownership isolation, history/detail/tracking, cancellation, exactly-once stock release, status transitions, actor audit and read/write permission boundaries; latest branch-head CI PASS.
 - [x] Run MySQL 8.4 GitHub Actions `mvn clean verify` for Steps 2–3 — PASS, 38 tests, 0 failures, 0 errors, 0 skipped; Maven BUILD SUCCESS (workflow run 44145457771).
-- [ ] Update API/OpenAPI documentation for the remaining customer and staff order-management endpoints; Step 3 plan/report/project status updated.
-- [ ] Review diff to ensure Customer/Admin frontend source files and V1/V2/V3 are unchanged.
+- [x] Update Phase 9 plan, report and project status documentation for Steps 1–5 and final CI results.
+- [x] Review PR changed-file list: no Customer/Admin frontend files and no V1/V2/V3 migration files are changed.
 - [ ] Owner-local clean-database verification remains an explicit environment acceptance step.
 
 ## Step 4 — Customer Order Management
@@ -80,7 +80,21 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 
 **Tests added:** MySQL-backed tests cover own-vs-other customer visibility, history/detail/tracking, cancellation release ledger and reserved balance, duplicate cancellation, and shipped-order rejection.
 
-**Verification:** Runtime code and tests have been committed to the Phase 9 branch. Step 4 GitHub Actions result has not yet been confirmed; do not treat Step 4 as CI-verified until a successful Java 21/MySQL 8.4 `mvn clean verify` run is available.
+**Verification:** Customer Order Management is included in successful branch-head GitHub Actions run #355. The latest run verifies all Phase 9 steps and the wider backend suite.
+
+## Final branch-head verification — 18 November 2026
+
+- Commit: `97268ced3eb2148c2431e95587217a303ff90def`.
+- GitHub Actions run #354: [PASS](https://github.com/musa390/My-project/actions/runs/44159524207).
+- GitHub Actions run #355: [PASS](https://github.com/musa390/My-project/actions/runs/44159534434).
+- Environment: Java 21 + MySQL 8.4; command: `mvn --batch-mode --no-transfer-progress clean verify`.
+- Latest test result: **47 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**.
+- Security regression coverage includes CUSTOMER role isolation from staff order reads, explicit ADMIN/MANAGER role plus `orders.read` requirement, Manager read/write permission boundaries, and HTTP 403 handling for access denial.
+- PR #6 remains open, draft and unmerged.
+- Changed-file review confirms no Customer/Admin frontend files and no V1/V2/V3 migration files changed.
+- No V4 migration was needed.
+
+**Phase 9 GitHub-side implementation, regression fixes, CI verification and documentation are complete.** The only outstanding acceptance check is owner-local clean-database verification on the user's Windows environment. Preserve the earlier failed local database; use a separate clean database when performing that check.
 
 ## Out of scope
 - Real payment gateway integration or marking an order PAID from a browser callback (Phase 10).
