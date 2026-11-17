@@ -36,7 +36,7 @@ class CheckoutPreviewIntegrationTest {
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode))))
+                .content(objectMapper.writeValueAsString(Map.of("addressId", addressId, "couponCode", couponCode, "subtotal", 1, "discountTotal", 99999, "shippingTotal", 99999, "grandTotal", 1))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(2400))
             .andExpect(jsonPath("$.data.totals.discountTotal").value(150))
