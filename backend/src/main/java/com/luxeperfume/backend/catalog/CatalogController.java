@@ -36,6 +36,10 @@ public class CatalogController {
         Object value = body.get(key);
         return value == null ? fallback : String.valueOf(value).trim();
     }
+    private static BigDecimal decimal(Map<String,Object> body, String key, String fallback) {
+        try { return new BigDecimal(text(body,key,fallback)); }
+        catch (NumberFormatException ex) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST,key + " must be a valid decimal number"); }
+    }
     private static long number(Map<String,Object> body, String key, long fallback) {
         Object value = body.get(key);
         if (value == null) return fallback;
@@ -260,7 +264,7 @@ public class CatalogController {
     public ApiResponse<Map<String,Object>> createVariant(@PathVariable long id,@RequestBody Map<String,Object> body) {
         one("SELECT id FROM products WHERE id=? AND deleted_at IS NULL",id);
         String sku=text(body,"sku","").toUpperCase(Locale.ROOT), name=text(body,"variantName","");
-        BigDecimal price=new BigDecimal(text(body,"price","-1"));
+        BigDecimal price=decimal(body,"price","-1");
         if(sku.isBlank()||name.isBlank()||price.signum()<0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"sku, variantName and non-negative price are required");
         Object options=body.get("optionValues");
         if(options!=null && !(options instanceof String)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"optionValues must be a valid JSON string");
@@ -278,7 +282,7 @@ public class CatalogController {
         Map<String,Object> v=one("SELECT * FROM product_variants WHERE id=?",variantId);
         jdbc.update("UPDATE product_variants SET sku=?,variant_name=?,price=?,compare_at_price=?,is_default=?,is_active=? WHERE id=?",
             text(body,"sku",String.valueOf(v.get("sku"))),text(body,"variantName",String.valueOf(v.get("variant_name"))),
-            new BigDecimal(text(body,"price",String.valueOf(v.get("price")))),body.getOrDefault("compareAtPrice",v.get("compare_at_price")),
+            decimal(body,"price",String.valueOf(v.get("price"))),body.getOrDefault("compareAtPrice",v.get("compare_at_price")),
             bool(body,"isDefault",Boolean.TRUE.equals(v.get("is_default"))),bool(body,"isActive",Boolean.TRUE.equals(v.get("is_active"))),variantId);
         return ApiResponse.success("Variant updated",one("SELECT * FROM product_variants WHERE id=?",variantId));
     }
