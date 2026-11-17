@@ -12,8 +12,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,12 +29,12 @@ class CheckoutPreviewIntegrationTest {
         long variantId = createVariant(new BigDecimal("1200.00"), 8);
         addToCart(customer.userId(), variantId, 2);
         long addressId = createAddress(customer.userId());
-        long couponId = createCoupon("PERCENTAGE", new BigDecimal("10.00"),
+        String couponCode = createCoupon("PERCENTAGE", new BigDecimal("10.00"),
                 new BigDecimal("150.00"), BigDecimal.ZERO);
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
-                .content("{\"addressId\":" + addressId + ",\"couponCode\":\"PCT-" + couponId
+                .content("{\"addressId\":" + addressId + ",\"couponCode\":\"" + couponCode
                         + "\",\"subtotal\":1,\"discountTotal\":99999,\"shippingTotal\":99999,\"grandTotal\":1}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totals.subtotal").value(2400))
@@ -55,7 +53,7 @@ class CheckoutPreviewIntegrationTest {
         long variantId = createVariant(new BigDecimal("700.00"), 5);
         addToCart(customer.userId(), variantId, 2);
         long addressId = createAddress(customer.userId());
-        long couponId = createCoupon("FIXED", new BigDecimal("250.00"), null, BigDecimal.ZERO);
+        String couponCode = createCoupon("FIXED", new BigDecimal("250.00"), null, BigDecimal.ZERO);
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
@@ -90,7 +88,7 @@ class CheckoutPreviewIntegrationTest {
         long variantId = createVariant(new BigDecimal("500.00"), 5);
         addToCart(customer.userId(), variantId, 2);
         long addressId = createAddress(customer.userId());
-        long couponId = createCoupon("FIXED", new BigDecimal("50.00"), null, new BigDecimal("1500.00"));
+        String couponCode = createCoupon("FIXED", new BigDecimal("50.00"), null, new BigDecimal("1500.00"));
 
         mockMvc.perform(post("/api/v1/checkout/preview").with(csrf()).cookie(customer.access())
                 .contentType("application/json")
@@ -139,14 +137,14 @@ class CheckoutPreviewIntegrationTest {
         return jdbc.queryForObject("SELECT id FROM addresses WHERE user_id=? ORDER BY id DESC LIMIT 1", Long.class, userId);
     }
 
-    private long createCoupon(String type, BigDecimal value, BigDecimal cap, BigDecimal minimum) {
+    private String createCoupon(String type, BigDecimal value, BigDecimal cap, BigDecimal minimum) {
         String code = ("PERCENTAGE".equals(type) ? "PCT-" : "FIX-") + UUID.randomUUID().toString().substring(0, 8);
         jdbc.update("""
                 INSERT INTO coupons(code,discount_type,discount_value,minimum_order_amount,maximum_discount_amount,
                                     usage_limit,per_user_limit,usage_count,is_active)
                 VALUES(?,?,?,?,?,NULL,NULL,0,TRUE)
                 """, code, type, value, minimum, cap);
-        return jdbc.queryForObject("SELECT id FROM coupons WHERE code=?", Long.class, code);
+        return code;
     }
 
     private record Session(Cookie access, long userId) {}
