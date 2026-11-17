@@ -148,7 +148,7 @@ class CartWishlistInventoryIntegrationTest {
 
         mockMvc.perform(get("/api/v1/staff/inventory/low-stock").cookie(staff.access()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[?(@.variant_id==" + variantId + ")]").isNotEmpty());
+            .andExpect(jsonPath("$.data[0].variant_id").value(variantId));
 
         mockMvc.perform(get("/api/v1/staff/inventory/variants/" + variantId + "/movements").cookie(staff.access()))
             .andExpect(status().isOk())
