@@ -8,7 +8,8 @@
 - Phase 2 — Complete (100%); Customer Frontend QA owner-confirmed PASS.
 - Phase 3 — Complete (100%); Admin implementation, local checks, CI and owner-confirmed browser QA passed.
 - Phase 4 — **Complete (100%)**; 30-table MySQL schema, ERD, V1/V2 migrations, sample data, constraints and MySQL 8.4 CI verification passed.
-- Phase 5 — **In Progress; implementation and CI verified, local owner verification pending.** Backend scaffold, Maven configuration, MySQL/Flyway, reusable repository/service foundation, API responses, exception handling, validation, CORS, OpenAPI, health endpoints and integration tests are in place.
+- Phase 5 — **Approximately 90%; implementation and GitHub CI verified, local owner verification pending.** The 4 integration tests passed in GitHub CI against MySQL 8.4. Local Windows Maven verification previously failed because Flyway found a failed, partially-applied V1 migration in the persistent local database. The local database has not been declared repaired or verified.
+- Phase 6 — **Started; architecture and implementation plan committed.** Authentication and authorization implementation is the current workstream.
 
 ## Phase 1–3 evidence
 See the respective phase reports and commit history in this repository. Phase 3 final report: ./PHASE3-ADMIN-FRONTEND-REPORT.md.
@@ -33,8 +34,17 @@ See the respective phase reports and commit history in this repository. Phase 3 
 - Integration tests cover the health API, MySQL Actuator health, OpenAPI JSON and applied V1/V2 migrations.
 - Backend Foundation CI run 44109910795: **SUCCESS** on commit f252915e050cd0a9e1f7434f21d7e98fc0973b04; Maven build and all 4 integration tests passed against MySQL 8.4.
 - Database migration fix: generated columns involved in cascading foreign keys now use VIRTUAL rather than STORED, preserving their unique indexes while allowing MySQL 8.4 to create the foreign keys.
-- Local Docker/MySQL startup, local Maven verification and browser/API endpoint checks still require owner confirmation. Therefore Phase 5 is not yet marked 100%.
+- Local verification is pending. Previous local failure showed Flyway validation rejecting a failed V1 migration in the persistent local database. Preserve that database; inspect/reconcile safely or verify against a separately-created clean database. Do not blindly run Flyway repair or drop existing data.
 - Plan and acceptance checklist: ./PHASE5-BACKEND-FOUNDATION-PLAN.md.
+
+## Phase 6 — Authentication & Authorization
+- Working branch: phase6/authentication-authorization.
+- Phase 6 architecture and acceptance plan: ./PHASE6-AUTHENTICATION-AUTHORIZATION-PLAN.md.
+- Planned: customer registration/login, password hashing, JWT in Secure HttpOnly cookies, server-side session/refresh-token lifecycle, Google OIDC, logout, password recovery, CUSTOMER/STAFF/ADMIN roles, staff permissions and protected APIs.
+- Security design requires CSRF protection for cookie-authenticated unsafe requests, strict CORS, server-side token/session revocation, validated OIDC tokens and no secrets in Git.
+- Phase 4 V1/V2 migrations remain immutable; Phase 6 schema changes must use V3+ migrations.
+- Customer Website and Admin Frontend source trees remain protected and must not be changed without explicit owner approval.
+- Status: plan committed; implementation and verification not yet complete.
 
 ## Roadmap
 | Phase | Scope | Status |
@@ -44,8 +54,8 @@ See the respective phase reports and commit history in this repository. Phase 3 
 | 2 | Customer Frontend Finalization | Complete (100%) |
 | 3 | Admin Frontend Development | Complete (100%) |
 | 4 | Database Design | **Complete (100%)** |
-| 5 | Spring Boot backend foundation | **Implementation + CI verified; local verification pending** |
-| 6 | Authentication and authorization | Pending |
+| 5 | Spring Boot backend foundation | **Approximately 90%; local verification pending** |
+| 6 | Authentication and authorization | **Started; plan committed** |
 | 7 | Product/catalog backend | Pending |
 | 8 | Cart, wishlist and inventory | Pending |
 | 9 | Checkout and order management | Pending |
