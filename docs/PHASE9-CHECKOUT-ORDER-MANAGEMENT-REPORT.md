@@ -50,3 +50,14 @@ The existing V1 schema already supports the planned Phase 9 workflow. No V4 migr
 ## Java 21 OOP requirement
 
 The project owner confirmed that Java OOP is the primary backend programming approach and all four pillars are mandatory in Phase 9. A dedicated architecture document now maps Encapsulation, Inheritance, Abstraction and Polymorphism to concrete checkout/order domain classes, strategy interfaces, services and tests. This is architecture documentation only; runtime Java classes and APIs have not yet been implemented or tested.
+
+
+## Step 2 — Checkout Validation & Pricing Engine
+
+- Added the authenticated `POST /api/v1/checkout/preview` endpoint.
+- Added Java 21 domain/pricing classes using Encapsulation, Inheritance, Abstraction and Polymorphism.
+- Server loads customer-owned address, active cart, current database prices, product/variant availability and inventory stock.
+- Added percentage/fixed coupon strategies with date, usage, minimum-spend, maximum-discount and product/category-scope validation.
+- Added configurable server-side flat shipping and percentage tax policies. Development defaults are explicitly 0.00 / 0.00%; production values must be configured.
+- Checkout preview does not create orders, reserve stock, consume coupon usage or mutate carts.
+- Added OOP unit tests and MySQL-backed API integration tests. **GitHub Actions verification is pending; no Maven PASS claim is made yet.**
