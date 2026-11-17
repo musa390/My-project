@@ -53,8 +53,8 @@ Phase 9 must implement Encapsulation, Inheritance, Abstraction and Polymorphism 
 - [ ] Implement transactional order creation, stock reservation and cart conversion.
 - [ ] Implement customer history, detail, tracking and cancellation with stock release.
 - [ ] Implement Staff/Admin order list/detail/status transitions and permission checks.
-- [ ] Add integration tests for ownership, price tampering, coupon limits/restrictions, stock races/rollback, totals, snapshots, status transitions and cancellation idempotency.
-- [ ] Run MySQL 8.4 GitHub Actions `mvn clean verify`; fix all failures.
+- [x] Add Step 2 unit/integration tests for checkout address ownership, client-total tampering, coupon types/caps/limits/product restrictions, stock validation and authentication. Order-creation/rollback/status/cancellation tests remain for later steps.
+- [x] Run MySQL 8.4 GitHub Actions `mvn clean verify` for Step 2 — PASS, 35 tests, 0 failures, 0 errors, 0 skipped; Maven BUILD SUCCESS (workflow run 44143372079).
 - [ ] Update API/OpenAPI documentation, Phase 9 report and project status.
 - [ ] Review diff to ensure Customer/Admin frontend source files and V1/V2/V3 are unchanged.
 - [ ] Owner-local clean-database verification remains an explicit environment acceptance step.
@@ -126,3 +126,18 @@ The existing V1 schema already supports the planned Phase 9 workflow. No V4 migr
 - Polymorphism: percentage/fixed coupon strategy implementations and injected policy interfaces.
 
 **Tests added:** strategy/domain unit tests and MySQL-backed MockMvc integration tests for percentage/fixed coupons, max discount, product restrictions, minimum spend, usage limits, address ownership, stock validation, authentication and ignored client totals. CI result is pending; do not mark tests PASS until the latest branch-head workflow succeeds.
+
+
+### Step 2 verification result
+
+<success>PASS</success> GitHub Actions workflow: https://github.com/musa390/My-project/actions/runs/44143372079
+
+- Java 21 and MySQL 8.4.
+- Command: `mvn --batch-mode --no-transfer-progress clean verify`.
+- Backend test suite: **35 tests, 0 failures, 0 errors, 0 skipped**.
+- Checkout-specific tests: **6 integration tests**.
+- OOP pricing tests: **3 unit tests**.
+- Flyway V1/V2/V3 applied successfully in the ephemeral CI database.
+- Maven result: **BUILD SUCCESS**.
+
+This verifies the Step 2 implementation in GitHub CI. Owner-local verification against a separately created clean database remains pending; the previously failed local database must be preserved.
