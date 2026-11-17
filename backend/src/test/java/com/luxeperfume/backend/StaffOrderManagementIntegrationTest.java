@@ -149,7 +149,7 @@ class StaffOrderManagementIntegrationTest {
     @Test
     @Transactional
     void customerOrderReadPermissionDoesNotGrantStaffOrderReadAccess() throws Exception {
-        Session customer = register("staff-order-customer-boundary");
+        Session customer = register("staff-customer");
 
         mockMvc.perform(get("/api/v1/staff/orders").cookie(customer.access()))
             .andExpect(status().isForbidden());
