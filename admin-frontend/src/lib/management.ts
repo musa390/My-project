@@ -20,6 +20,11 @@ export type InventoryRecord = { variantId?: number; variant_id?: number; product
 export type ContactMessage = { id: number; full_name: string; email: string; subject: string; message: string; status: string; created_at: string };
 export type StaffCustomer = { id:number; email:string; first_name:string; last_name?:string; phone?:string; account_status:string; order_count:number; lifetime_value:number|string };
 export type StaffPayment = { payment_id:number; order_number:string; customer_email:string; provider:string; payment_method:string; amount:number|string; currency:string; payment_status:string };
+export type CouponRecord = { id:number; code:string; description?:string; discount_type:string; discount_value:number|string; minimum_order_amount:number|string; is_active:boolean };
+export type BannerRecord = { id:number; title:string; subtitle?:string; image_url:string; target_url?:string; placement:string; is_active:boolean; sort_order:number };
+export type StaffReview = { id:number; product_name:string; customer_email:string; rating:number; title?:string; body?:string; moderation_status:string };
+export type NewsletterSubscriber = { id:number; email:string; subscription_status:string; consented_at?:string; confirmed_at?:string; unsubscribed_at?:string; consent_source?:string };
+export type AnalyticsOverview = { activeProducts:number; totalOrders:number; pendingOrders:number; activeCustomers:number; paidRevenue:number|string; lowStockVariants:number; newContactMessages:number; requestedReturns:number; subscribedNewsletter:number; pendingPayments:number };
 
 export const adminApi = {
   products: (q = "") => data<Page<CatalogRecord>>("/api/v1/staff/catalog/products?q=" + encodeURIComponent(q) + "&page=0&size=100"),
@@ -49,6 +54,19 @@ export const adminApi = {
   adjustInventory: (variantId:number,quantityChange:number,note:string) => data<Record<string,unknown>>("/api/v1/staff/inventory/variants/" + variantId + "/adjustments",{method:"POST",body:{quantityChange,note}}),
   contacts: (status?:string) => data<{items:ContactMessage[];page:number;size:number}>("/api/v1/staff/contact-messages?page=0&size=100" + (status ? "&status=" + encodeURIComponent(status) : "")),
   updateContactStatus: (id:number,status:string) => data<Record<string,unknown>>("/api/v1/staff/contact-messages/" + id + "/status",{method:"PATCH",body:{status}}),
+  coupons: (q = "") => data<Page<CouponRecord>>("/api/v1/staff/coupons?q=" + encodeURIComponent(q) + "&page=0&size=100"),
+  createCoupon: (body:Record<string,unknown>) => data<CouponRecord>("/api/v1/staff/coupons",{method:"POST",body}),
+  updateCoupon: (id:number,body:Record<string,unknown>) => data<CouponRecord>("/api/v1/staff/coupons/" + id,{method:"PUT",body}),
+  deactivateCoupon: (id:number) => data<Record<string,unknown>>("/api/v1/staff/coupons/" + id,{method:"DELETE"}),
+  banners: (q = "") => data<Page<BannerRecord>>("/api/v1/staff/banners?q=" + encodeURIComponent(q) + "&page=0&size=100"),
+  createBanner: (body:Record<string,unknown>) => data<BannerRecord>("/api/v1/staff/banners",{method:"POST",body}),
+  updateBanner: (id:number,body:Record<string,unknown>) => data<BannerRecord>("/api/v1/staff/banners/" + id,{method:"PUT",body}),
+  deactivateBanner: (id:number) => data<Record<string,unknown>>("/api/v1/staff/banners/" + id,{method:"DELETE"}),
+  reviews: (q = "") => data<Page<StaffReview>>("/api/v1/staff/reviews?q=" + encodeURIComponent(q) + "&page=0&size=100"),
+  moderateReview: (id:number,status:"APPROVED"|"REJECTED") => data<Record<string,unknown>>("/api/v1/staff/reviews/" + id + "/moderation",{method:"PATCH",body:{status}}),
+  newsletterSubscribers: (q = "") => data<Page<NewsletterSubscriber>>("/api/v1/staff/newsletter/subscribers?q=" + encodeURIComponent(q) + "&page=0&size=100"),
+  unsubscribeNewsletter: (id:number) => data<Record<string,unknown>>("/api/v1/staff/newsletter/subscribers/" + id + "/unsubscribe",{method:"POST"}),
+  analytics: () => data<AnalyticsOverview>("/api/v1/staff/analytics/overview"),
   returns: () => data<Array<Record<string,unknown>>>("/api/v1/staff/returns"),
   decideReturn: (id:number,decision:"APPROVED"|"REJECTED",note:string) => data<Record<string,unknown>>("/api/v1/staff/returns/" + id + "/decision",{method:"PATCH",body:{decision,note}}),
   receiveReturn: (id:number,note:string) => data<Record<string,unknown>>("/api/v1/staff/returns/" + id + "/receive",{method:"POST",body:{note}}),
