@@ -14,5 +14,10 @@ public final class FlatRateShippingPolicy implements ShippingPolicy {
         this.flatRate = flatRate.setScale(2, RoundingMode.HALF_UP);
     }
 
+    @Override
+    public boolean supports(BigDecimal subtotal, String countryCode, String city, String area) {
+        return true;
+    }
+
     @Override public BigDecimal calculate(String countryCode, String city, String area) { return flatRate; }
 }

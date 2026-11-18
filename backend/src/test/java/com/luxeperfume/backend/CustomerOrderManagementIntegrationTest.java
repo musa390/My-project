@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,6 +31,21 @@ class CustomerOrderManagementIntegrationTest {
         Session owner = register("order-owner");
         Session other = register("order-other");
         String orderNumber = placeOrder(owner, 1);
+
+        MvcResult notificationInbox = mockMvc.perform(get("/api/v1/notifications").cookie(owner.access()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andReturn();
+        Number notificationIdValue = com.jayway.jsonpath.JsonPath.read(
+                notificationInbox.getResponse().getContentAsString(), "$.data[0].id");
+        long notificationId = notificationIdValue.longValue();
+        mockMvc.perform(patch("/api/v1/notifications/" + notificationId + "/read")
+                .with(csrf()).cookie(owner.access()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.isRead").value(true));
+        mockMvc.perform(get("/api/v1/notifications").cookie(other.access()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(0));
 
         mockMvc.perform(get("/api/v1/orders").cookie(owner.access()))
             .andExpect(status().isOk())
@@ -78,6 +94,9 @@ class CustomerOrderManagementIntegrationTest {
         assertThat(jdbc.queryForObject(
                 "SELECT quantity_reserved FROM inventory WHERE variant_id=?", Integer.class, variantId))
                 .isZero();
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM user_notifications WHERE user_id=? AND event_key=?",
+                Integer.class, customer.userId(), "order-cancelled:" + orderId)).isEqualTo(1);
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM inventory_movements
                 WHERE variant_id=? AND movement_type='RELEASE' AND quantity_change=-2

@@ -110,6 +110,10 @@ public class StaffOrderApplicationService {
         String target = request.status().trim().toUpperCase();
         String payment = (String) order.get("payment_status");
 
+        if ("RETURNED".equals(target)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Use the approved return-request workflow to mark an order as returned");
+        }
         if (!transitionPolicy.mayTransition(current, target)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Invalid order status transition: " + current + " -> " + target);

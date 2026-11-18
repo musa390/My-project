@@ -1,12 +1,10 @@
 # Phase Handoff — LUXE PERFUME
 
 ## Current checkpoint
-- Phase 0: Complete.
-- Phase 1: Complete — 100%.
-- Phase 2: Complete — 100%.
-- Phase 3: Complete — 100%.
-- Phase 4: Complete — 100%; MySQL 8.4 migrations, seed data and verification CI passed.
-- **Current: Phase 5 — Backend Foundation (implementation and CI verified; local owner verification pending).**
+- Phases 0–4: Complete as recorded in `docs/PROJECT_STATUS.md`.
+- Phases 5–9: See `docs/PROJECT_STATUS.md` for the exact CI and owner-local verification gates.
+- Phase 10: IN PROGRESS. COD and manual refund foundation are verified at the previous CI checkpoint; bKash/Nagad sandbox integration remains blocked on official merchant specifications and sandbox acceptance. SSLCommerz is deferred until the final payment phase.
+- **Current: Phase 11 — Advanced Business Logic & OOP implementation committed on `phase11/advanced-business-logic-oop`; draft PR #8 is open. Backend CI, Database Migration CI and owner-local clean-database verification are pending.**
 
 ## Sources of truth
 - docs/PROJECT_MASTER_PLAN.md
@@ -14,6 +12,9 @@
 - docs/DATABASE_DESIGN.md
 - docs/PHASE4-DATABASE-REPORT.md
 - docs/PHASE5-BACKEND-FOUNDATION-PLAN.md
+- docs/PHASE10-FINAL-STATUS-REPORT.md
+- docs/PHASE11-ADVANCED-BUSINESS-LOGIC-OOP-PLAN.md
+- docs/PHASE11-ADVANCED-BUSINESS-LOGIC-REPORT.md
 - database/README.md
 
 ## Customer Website protection

@@ -1,6 +1,7 @@
 package com.luxeperfume.backend.payment.domain;
 
 /** Centralized monotonic payment-state rules. A browser redirect is never evidence of PAID. */
+/** [POL] Central payment state-transition policy; terminal and refund states cannot regress. */
 public final class PaymentStatusTransitionPolicy {
     private PaymentStatusTransitionPolicy() {}
 

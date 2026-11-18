@@ -2,6 +2,7 @@ package com.luxeperfume.backend.checkout;
 
 import com.luxeperfume.backend.checkout.dto.OrderCancellationRequest;
 import com.luxeperfume.backend.checkout.policy.OrderCancellationPolicy;
+import com.luxeperfume.backend.notification.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -18,10 +19,13 @@ public class CustomerOrderApplicationService {
     private static final int MAX_PAGE_SIZE = 50;
     private final JdbcTemplate jdbc;
     private final OrderCancellationPolicy cancellationPolicy;
+    private final NotificationService notificationService;
 
-    public CustomerOrderApplicationService(JdbcTemplate jdbc, OrderCancellationPolicy cancellationPolicy) {
+    public CustomerOrderApplicationService(JdbcTemplate jdbc, OrderCancellationPolicy cancellationPolicy,
+                                           NotificationService notificationService) {
         this.jdbc = jdbc;
         this.cancellationPolicy = cancellationPolicy;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -168,6 +172,7 @@ public class CustomerOrderApplicationService {
                 INSERT INTO order_status_history(order_id,from_status,to_status,note,changed_by)
                 VALUES(?,?,'CANCELLED',?,?)
                 """, orderId, fromStatus, reason, customerId);
+        notificationService.orderCancelled(customerId, orderId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("orderNumber", orderNumber);

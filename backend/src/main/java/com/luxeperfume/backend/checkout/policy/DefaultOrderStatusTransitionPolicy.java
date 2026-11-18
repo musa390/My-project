@@ -11,7 +11,8 @@ public final class DefaultOrderStatusTransitionPolicy implements OrderStatusTran
             "PENDING", Set.of("CONFIRMED", "CANCELLED"),
             "CONFIRMED", Set.of("PROCESSING", "CANCELLED"),
             "PROCESSING", Set.of("SHIPPED", "CANCELLED"),
-            "SHIPPED", Set.of("DELIVERED")
+            "SHIPPED", Set.of("DELIVERED"),
+            "DELIVERED", Set.of("RETURNED")
     );
 
     @Override

@@ -30,22 +30,27 @@ public class OrderApplicationService {
     private final CheckoutQuoteService quoteService;
     private final InventoryReservationService inventoryReservationService;
     private final OrderNumberGenerator orderNumberGenerator;
+    private final NotificationService notificationService;
     private final Clock clock;
 
     @Autowired
     public OrderApplicationService(JdbcTemplate jdbc, CheckoutQuoteService quoteService,
                                    InventoryReservationService inventoryReservationService,
-                                   OrderNumberGenerator orderNumberGenerator) {
-        this(jdbc, quoteService, inventoryReservationService, orderNumberGenerator, Clock.systemUTC());
+                                   OrderNumberGenerator orderNumberGenerator,
+                                   NotificationService notificationService) {
+        this(jdbc, quoteService, inventoryReservationService, orderNumberGenerator,
+                notificationService, Clock.systemUTC());
     }
 
     OrderApplicationService(JdbcTemplate jdbc, CheckoutQuoteService quoteService,
                             InventoryReservationService inventoryReservationService,
-                            OrderNumberGenerator orderNumberGenerator, Clock clock) {
+                            OrderNumberGenerator orderNumberGenerator,
+                            NotificationService notificationService, Clock clock) {
         this.jdbc = jdbc;
         this.quoteService = quoteService;
         this.inventoryReservationService = inventoryReservationService;
         this.orderNumberGenerator = orderNumberGenerator;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
@@ -217,6 +222,7 @@ public class OrderApplicationService {
                 INSERT INTO order_status_history(order_id,from_status,to_status,note,changed_by)
                 VALUES(?,NULL,'PENDING','Order placed by customer',?)
                 """, orderId, userId);
+        notificationService.orderPlaced(userId, orderId);
 
         int converted = jdbc.update("""
                 UPDATE carts SET cart_status='CONVERTED'

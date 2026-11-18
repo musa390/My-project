@@ -1,6 +1,7 @@
 package com.luxeperfume.backend.inventory;
 
 import com.luxeperfume.backend.common.dto.ApiResponse;
+import com.luxeperfume.backend.inventory.domain.InventoryQuantity;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 @RestController
 @Validated
+/** [ENC] Stock mutations are validated by the immutable InventoryQuantity domain value. */
 public class InventoryController {
     private final JdbcTemplate jdbc;
 
@@ -89,11 +91,15 @@ public class InventoryController {
         Map<String,Object> current = rows.getFirst();
         long onHand = ((Number) current.get("quantity_on_hand")).longValue();
         long reserved = ((Number) current.get("quantity_reserved")).longValue();
-        long next = onHand + request.quantityChange();
-        if (next < reserved) throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "Adjustment cannot reduce stock below the reserved quantity (" + reserved + ")");
-        if (next < 0 || next > 4_294_967_295L)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Adjusted stock is outside the supported range");
+        InventoryQuantity currentStock = new InventoryQuantity(onHand, reserved,
+                ((Number) current.get("reorder_level")).longValue());
+        InventoryQuantity adjusted;
+        try {
+            adjusted = currentStock.adjustOnHand(request.quantityChange());
+        } catch (IllegalArgumentException invalidAdjustment) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, invalidAdjustment.getMessage());
+        }
+        long next = adjusted.onHand();
 
         jdbc.update("UPDATE inventory SET quantity_on_hand=? WHERE variant_id=?", next, variantId);
         jdbc.update("""

@@ -1,0 +1,41 @@
+CREATE TABLE return_requests (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    return_reference VARCHAR(40) NOT NULL,
+    idempotency_key VARCHAR(100) NOT NULL,
+    return_status VARCHAR(20) NOT NULL DEFAULT 'REQUESTED',
+    reason VARCHAR(500) NOT NULL,
+    requested_by BIGINT UNSIGNED NOT NULL,
+    processed_by BIGINT UNSIGNED NULL,
+    requested_at DATETIME NOT NULL,
+    processed_at DATETIME NULL,
+    received_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_return_order (order_id),
+    UNIQUE KEY uq_return_reference (return_reference),
+    UNIQUE KEY uq_return_idempotency (idempotency_key),
+    KEY idx_return_queue (return_status, requested_at, id),
+    KEY idx_return_user (user_id, requested_at, id),
+    CONSTRAINT fk_return_order FOREIGN KEY (order_id) REFERENCES customer_orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_return_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_return_requested_by FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_return_processed_by FOREIGN KEY (processed_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT chk_return_status CHECK (return_status IN ('REQUESTED','APPROVED','REJECTED','RECEIVED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE return_request_events (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    return_request_id BIGINT UNSIGNED NOT NULL,
+    from_status VARCHAR(20) NULL,
+    to_status VARCHAR(20) NOT NULL,
+    note VARCHAR(500) NULL,
+    changed_by BIGINT UNSIGNED NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_return_events_history (return_request_id, created_at, id),
+    CONSTRAINT fk_return_event_request FOREIGN KEY (return_request_id) REFERENCES return_requests(id) ON DELETE CASCADE,
+    CONSTRAINT fk_return_event_actor FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

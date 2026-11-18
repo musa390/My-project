@@ -3,6 +3,7 @@ package com.luxeperfume.backend.checkout.domain;
 import java.math.BigDecimal;
 import java.util.Set;
 
+/** [ENC] Validated immutable coupon rules and eligible product/category scope. */
 public record Coupon(String code, String discountType, BigDecimal discountValue,
                      BigDecimal minimumOrderAmount, BigDecimal maximumDiscountAmount,
                      BigDecimal eligibleSubtotal, Set<Long> eligibleProductIds,

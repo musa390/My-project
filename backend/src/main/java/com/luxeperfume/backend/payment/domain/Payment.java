@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 /** Small domain aggregate; persistence and provider payloads stay outside this object. */
+/** [ENC] Payment aggregate owns its state and permits only policy-approved transitions. */
 public final class Payment {
     private final long id;
     private final long orderId;

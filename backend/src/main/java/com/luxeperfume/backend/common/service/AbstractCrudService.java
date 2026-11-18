@@ -13,6 +13,7 @@ import java.util.List;
  * Concrete domain services supply their own repository and business rules.
  */
 @Transactional(readOnly = true)
+/** [INH] Reusable transactional CRUD base for BaseEntity-backed repositories. */
 public abstract class AbstractCrudService<
         T extends BaseEntity,
         ID extends Serializable,

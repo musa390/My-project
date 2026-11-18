@@ -3,6 +3,7 @@ package com.luxeperfume.backend.payment.domain;
 import java.math.BigDecimal;
 
 /** Provider adapter contract. Implementations must use sandbox endpoints and verify server-to-server. */
+/** [ABS] Provider adapter contract; only officially specified sandbox adapters may implement it. */
 public interface PaymentGateway {
     PaymentProvider provider();
 
