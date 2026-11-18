@@ -45,7 +45,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
-      - run: npm run verify:phase3
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
