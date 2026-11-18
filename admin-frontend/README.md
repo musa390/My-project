@@ -17,7 +17,7 @@ npm run lint
 npm run build
 npm run dev
 ``
-Open `http://localhost:3000`.
+Open `http://localhost:3001` (the customer storefront uses port 3000).
 
 ## Admin modules
 Dashboard, Login placeholder, Products, Categories, Brands, Collections, Orders, Customers, Inventory, Payments, Coupons & Discounts, Reviews, Banners, Newsletter, Analytics, Staff & Roles and Settings.
@@ -27,7 +27,7 @@ Management pages include searchable/filterable demo tables and temporary create/
 
 ## Architecture boundaries
 - This is a separate app; do not place Admin pages in `customer-frontend/`.
-- No API, database, authentication, payment provider or live store operation is connected.
+- Authentication now uses the backend API and requires an `ADMIN` or `MANAGER` role. Other management data remains demo-only until its API module is integrated.
 - All data must remain labelled demo until backend and database integration.
 - Customer Website source is protected and must not be changed during Phase 3 without explicit approval.
 
