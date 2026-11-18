@@ -1,0 +1,35 @@
+# Render Blueprint for the stateless Spring Boot API.
+# Database is external managed MySQL-compatible TiDB; no database credentials belong here.
+services:
+  - type: web
+    name: luxe-perfume-staging-api
+    runtime: docker
+    plan: free
+    branch: phase14/staging-deployment-setup
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    autoDeploy: false
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: staging
+      - key: DATABASE_URL
+        sync: false
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: JWT_SECRET_BASE64
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: STOREFRONT_URL
+        sync: false
+      - key: PASSWORD_RESET_FRONTEND_URL
+        sync: false
+      - key: AUTH_OAUTH_SUCCESS_REDIRECT
+        sync: false
+      - key: AUTH_COOKIE_SECURE
+        value: "true"
+      - key: SWAGGER_UI_ENABLED
+        value: "false"
