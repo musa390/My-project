@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -28,7 +29,8 @@ class CustomerAddressIntegrationTest {
                 """, email);
         Long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long.class, email);
         jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='CUSTOMER'", userId);
-        var authentication = new TestingAuthenticationToken(userId, "unused");
+        var authentication = new TestingAuthenticationToken(userId, "unused", "ROLE_CUSTOMER");
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         var request = new CustomerAddressController.AddressRequest(
                 "Home", "Phase13 Customer", "01700000000", "House 10, Road 2",
