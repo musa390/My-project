@@ -79,7 +79,12 @@ This is a local MySQL credential/permission issue, not evidence of a Phase 13 ap
 - [x] Customer contact and newsletter integration.
 - [x] Admin authentication, role guard and CRUD/management integrations listed above.
 - [x] Replace transactional demo data and client-only mutations in the main customer/admin flows.
-- [ ] Final CI pass on the latest commit.
+- [x] Final automated CI pass: Backend 80 tests, 0 failures/errors; Flyway 9 migrations validated; customer/admin typecheck, lint, production build and route smoke tests passed. [Backend CI](https://github.com/musa390/My-project/actions/runs/44244391311) · [Frontend CI](https://github.com/musa390/My-project/actions/runs/44244440780).
 - [ ] Local MySQL authentication repair / isolated clean database verification.
 - [ ] Browser end-to-end QA for customer and admin journeys.
 - [ ] Explicit Phase 13 completion sign-off.
+
+## Pull request
+- Draft PR #10: https://github.com/musa390/My-project/pull/10
+- Base: `phase12/additional-integrations`; head: `phase13/frontend-backend-integration`.
+- PR #10 is open, draft, mergeable and has not been merged.
