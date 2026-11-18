@@ -74,7 +74,7 @@ public class NewsletterController {
         } catch(RuntimeException ex) {
             // Subscription remains active; the one-time unsubscribe token remains stored as a hash.
         }
-        return ApiResponse.success("Newsletter subscription confirmed.",Map.of("subscribed",true));
+        return ApiResponse.success("Newsletter subscription confirmed.",Map.of("subscribed",true,"unsubscribeToken",unsubscribe));
     }
     @GetMapping("/unsubscribe")
     public ApiResponse<Map<String,Object>> unsubscribeByLink(@RequestParam @NotBlank String token) {
