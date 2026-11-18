@@ -47,6 +47,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from("lp_refresh", session.refreshToken())
                 .httpOnly(true).secure(secure).sameSite("Lax").path("/api/v1/auth")
                 .maxAge(Duration.ofDays(refreshDays)).build().toString());
+        var oauthSession = request.getSession(false);
+        if (oauthSession != null) {
+            oauthSession.invalidate();
+        }
         response.sendRedirect(redirectUrl);
     }
 }
