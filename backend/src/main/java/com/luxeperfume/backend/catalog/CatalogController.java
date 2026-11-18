@@ -144,6 +144,14 @@ public class CatalogController {
             SELECT p.id,p.name,p.slug,p.short_description,p.product_type,p.is_featured,p.created_at,
                    c.name category_name,c.slug category_slug,b.name brand_name,
                    (SELECT pi.image_url FROM product_images pi WHERE pi.product_id=p.id ORDER BY pi.is_primary DESC,pi.sort_order,pi.id LIMIT 1) image_url,
+                   (SELECT COALESCE(SUM(GREATEST(i.quantity_on_hand-i.quantity_reserved,0)),0)
+                    FROM product_variants v LEFT JOIN inventory i ON i.variant_id=v.id
+                    WHERE v.product_id=p.id AND v.is_active=TRUE) available_stock,
+                   (SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id',v.id,'variantName',v.variant_name,'sku',v.sku,
+                        'price',v.price,'availableQuantity',GREATEST(COALESCE(i.quantity_on_hand,0)-COALESCE(i.quantity_reserved,0),0))),
+                        JSON_ARRAY())
+                    FROM product_variants v LEFT JOIN inventory i ON i.variant_id=v.id
+                    WHERE v.product_id=p.id AND v.is_active=TRUE) variants,
                    (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE) price_min,
                    (SELECT MAX(v.price) FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE) price_max,
                    EXISTS(SELECT 1 FROM product_variants v JOIN inventory i ON i.variant_id=v.id
