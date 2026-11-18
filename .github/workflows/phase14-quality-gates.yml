@@ -59,6 +59,30 @@ jobs:
           path: backend/target/surefire-reports/
           if-no-files-found: ignore
           retention-days: 14
+      - name: Run backend API latency smoke
+        working-directory: backend
+        shell: bash
+        run: |
+          java -jar target/luxe-perfume-backend-0.1.0-SNAPSHOT.jar > /tmp/luxe-backend.log 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$backend_pid" 2>/dev/null; then
+              cat /tmp/luxe-backend.log
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/luxe-backend.log
+            exit 1
+          fi
+          node ../scripts/phase14-api-performance-smoke.mjs
 
   customer-frontend:
     name: Customer frontend + Chromium responsive smoke
