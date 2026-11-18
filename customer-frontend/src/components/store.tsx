@@ -5,12 +5,16 @@ import {useRouter,usePathname} from "next/navigation";
 import {useEffect,useMemo,useState,createContext,useContext} from "react";
 import type {ReactNode,FormEvent} from "react";
 import {ShoppingBag,Search,UserRound,Heart,Menu,X,ArrowRight,Instagram,Facebook,MapPin,Minus,Plus,Trash2,CheckCircle2} from "lucide-react";
-import {products,Product,money,productPrice,productStock} from "@/lib/products";
+import type {Product} from "@/lib/products";
+import {money,productPrice,productStock} from "@/lib/products";
+import {getCatalog,getProduct,getCart,getWishlist,addCartItem,updateCartItem,removeCartItem,addWishlistItem,removeWishlistItem} from "@/lib/commerce";
+import {getCurrentUser} from "@/lib/auth";
+import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact, contactFormMode} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
 import {signIn, registerAccount} from "@/lib/auth";
 
-type CartLine = { id: string; qty: number; size?: string };
+type CartLine = { id: string; qty: number; size?: string; cartItemId?: number; variantId?: number };
 type ResolvedCartLine = CartLine & { p: Product };
 type DemoOrderItem = { id: string; name: string; slug: string; size: string; qty: number; unitPrice: number; lineTotal: number; image: string };
 type DemoOrder = {
@@ -35,6 +39,9 @@ const isDemoOrder = (value: unknown): value is DemoOrder => {
  return typeof order.id === "string" && customerFields.every((field) => typeof customerRecord[field] === "string") && Array.isArray(order.items) && order.items.every(isDemoOrderItem) && typeof order.subtotal === "number" && typeof order.discount === "number" && (order.discountCode === null || typeof order.discountCode === "string") && typeof order.delivery === "number" && typeof order.total === "number" && ["bkash", "nagad", "cod"].includes(String(order.payment)) && typeof order.createdAt === "string" && typeof order.status === "string" && Number.isInteger(order.statusStep) && Number(order.statusStep) >= 0 && Number(order.statusStep) <= 5;
 };
 type StoreContextValue = {
+ products: Product[];
+ catalogLoading: boolean;
+ catalogError: string;
  cart: CartLine[];
  wish: string[];
  add: (id: string, size?: string, qty?: number) => void;
@@ -46,73 +53,74 @@ type StoreContextValue = {
  notify: (message: string) => void;
  toast: string | null;
 };
-const isCartLines = (value: unknown): value is CartLine[] => {
- if (!Array.isArray(value)) return false;
- const totals = new Map<string, number>();
- for (const item of value) {
-  if (!item || typeof item.id !== "string" || !Number.isInteger(item.qty) || item.qty <= 0 || (item.size !== undefined && !["30ml", "50ml", "100ml"].includes(item.size))) return false;
-  const product = products.find((entry) => entry.id === item.id);
-  if (!product) return false;
-  const size = item.size || "100ml";
-  const key = `${item.id}:${size}`;
-  if (totals.has(key) || item.qty > productStock(product, size)) return false;
-  totals.set(key, item.qty);
- }
- return true;
-};
-const isStringList = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string" && products.some((product) => product.id === item)) && new Set(value).size === value.length;
-function useSaved<T>(key: string, initial: T, validate: (value: unknown) => value is T) {
- const [value, setValue] = useState<T>(initial);
- const [loaded, setLoaded] = useState(false);
- useEffect(() => {
-  try {
-   const raw = localStorage.getItem(key);
-   if (raw !== null) {
-    const parsed: unknown = JSON.parse(raw);
-    if (validate(parsed)) setValue(parsed);
-   }
-  } catch { /* Ignore invalid or unavailable browser storage and keep safe defaults. */ }
-  finally { setLoaded(true); }
- }, [key, validate]);
- useEffect(() => {
-  if (!loaded) return;
-  try { localStorage.setItem(key, JSON.stringify(value)); }
-  catch { /* Storage may be disabled or full; the in-memory experience still works. */ }
- }, [key, value, loaded]);
- return [value, setValue, loaded] as const;
-}
 const StoreContext = createContext<StoreContextValue | null>(null);
+function mapCart(items: Awaited<ReturnType<typeof getCart>>["items"]): CartLine[] {
+ return items.map(item => ({
+  id:String(item.product_id),qty:Number(item.quantity),
+  size:String(item.variant_name||"100ml"),cartItemId:Number(item.item_id),variantId:Number(item.variant_id)
+ }));
+}
 export function StoreProvider({ children }: { children: ReactNode }) {
- const [cart, setCart] = useSaved<CartLine[]>("luxe-cart", [], isCartLines);
- const [wish, setWish] = useSaved<string[]>("luxe-wishlist", [], isStringList);
+ const [products,setProducts]=useState<Product[]>([]);
+ const [catalogLoading,setCatalogLoading]=useState(true);
+ const [catalogError,setCatalogError]=useState("");
+ const [cart,setCart]=useState<CartLine[]>([]);
+ const [wish,setWish]=useState<string[]>([]);
  const [toast,setToast]=useState<string|null>(null);
  const notify=(message:string)=>setToast(message);
+ useEffect(()=>{
+  let active=true;
+  getCatalog({page:0,size:100,sort:"newest"}).then(result=>{
+   if(active)setProducts(result.items.map((item,index)=>toStoreProduct(item,index)));
+  }).catch(error=>{
+   if(active)setCatalogError(error instanceof Error?error.message:"The live product catalogue could not be loaded.");
+  }).finally(()=>{if(active)setCatalogLoading(false);});
+  return ()=>{active=false;};
+ },[]);
+ useEffect(()=>{
+  let active=true;
+  getCurrentUser().then(async()=>{
+   const [serverCart,serverWishlist]=await Promise.all([getCart(),getWishlist()]);
+   if(active){setCart(mapCart(serverCart.items));setWish(serverWishlist.items.map(item=>String(item.product_id)));}
+  }).catch(()=>{if(active){setCart([]);setWish([]);}});
+  return ()=>{active=false;};
+ },[]);
  useEffect(()=>{if(!toast)return;const timer=window.setTimeout(()=>setToast(null),2600);return()=>window.clearTimeout(timer);},[toast]);
- const add = (id: string, size = "100ml", qty = 1) => setCart((old) => {
-  const product = products.find((p) => p.id === id);
-  if (!product || !Number.isInteger(qty) || qty < 1) return old;
-  const remaining = productStock(product, size) - old.filter((line) => line.id === id && (line.size || "100ml") === size).reduce((total, line) => total + line.qty, 0);
-  if (remaining <= 0) return old;
-  const found = old.find((line) => line.id === id && (line.size || "100ml") === size);
-  const amount = Math.min(remaining, qty);
-  return found ? old.map((line) => line.id === id && (line.size || "100ml") === size ? { ...line, qty: line.qty + amount } : line) : [...old, { id, size, qty: amount }];
- });
- const remove = (id: string, size?: string) => setCart((old) => old.filter((line) => !(line.id === id && (!size || (line.size || "100ml") === size))));
- const clearCart = () => setCart([]);
- const setQty = (id: string, size: string | undefined, qty: number) => setCart((old) => {
-  const product = products.find((p) => p.id === id);
-  if (!product || !Number.isInteger(qty)) return old;
-  const target = old.find((line) => line.id === id && (!size || (line.size || "100ml") === size));
-  if (!target) return old;
-  const variant = target.size || "100ml";
-  const otherQty = old.filter((line) => line.id === id && (line.size || "100ml") === variant && line !== target).reduce((total, line) => total + line.qty, 0);
-  const max = productStock(product, variant) - otherQty;
-  if (max < 1) return old.filter((line) => line !== target);
-  return old.map((line) => line === target ? { ...line, qty: Math.min(max, Math.max(1, qty)) } : line);
- });
- const toggleWish = (id: string) => setWish((old) => old.includes(id) ? old.filter((item) => item !== id) : [...old, id]);
- const count = cart.reduce((total, line) => total + line.qty, 0);
- return <StoreContext.Provider value={{ cart, wish, add, remove, setQty, toggleWish, clearCart, count, notify, toast }}>{children}</StoreContext.Provider>;
+ const add=(id:string,size="100ml",qty=1)=>{
+  void (async()=>{
+   const product=products.find(item=>item.id===id);
+   if(!product||!Number.isInteger(qty)||qty<1)return;
+   try{
+    const detail=await getProduct(product.slug);
+    const variants=detail.variants||[];
+    const target=variants.find(v=>String(v.variant_name||v.variantName||"").toLowerCase().replace(/\\s/g,"")===size.toLowerCase().replace(/\\s/g,""))
+      ||variants.find(v=>Number(v.volume_ml)===Number(size.replace(/[^0-9]/g,"")));
+    if(!target)throw new Error("The selected bottle size is not available for this product.");
+    const updated=await addCartItem(Number(target.id),qty);
+    setCart(mapCart(updated.items));
+    notify(product.name+" added to your server cart.");
+   }catch(error){notify(error instanceof Error?error.message:"Could not add this product to your cart.");}
+  })();
+ };
+ const remove=(id:string,size?:string)=>{
+  const target=cart.find(line=>line.id===id&&(!size||line.size===size));
+  if(!target?.cartItemId)return;
+  void removeCartItem(target.cartItemId).then(updated=>setCart(mapCart(updated.items))).catch(error=>notify(error instanceof Error?error.message:"Could not remove this cart item."));
+ };
+ const setQty=(id:string,size:string|undefined,qty:number)=>{
+  const target=cart.find(line=>line.id===id&&(!size||line.size===size));
+  if(!target?.cartItemId)return;
+  if(qty<1){remove(id,size);return;}
+  void updateCartItem(target.cartItemId,qty).then(updated=>setCart(mapCart(updated.items))).catch(error=>notify(error instanceof Error?error.message:"Could not update cart quantity."));
+ };
+ const toggleWish=(id:string)=>{
+  const exists=wish.includes(id);
+  const action=exists?removeWishlistItem:addWishlistItem;
+  void action(Number(id)).then(updated=>setWish(updated.items.map(item=>String(item.product_id)))).catch(error=>notify(error instanceof Error?error.message:"Please sign in to manage your wishlist."));
+ };
+ const clearCart=()=>setCart([]);
+ const count=cart.reduce((total,line)=>total+line.qty,0);
+ return <StoreContext.Provider value={{products,catalogLoading,catalogError,cart,wish,add,remove,setQty,toggleWish,clearCart,count,notify,toast}}>{children}</StoreContext.Provider>;
 }
 export function useStore(): StoreContextValue {
  const value = useContext(StoreContext);
