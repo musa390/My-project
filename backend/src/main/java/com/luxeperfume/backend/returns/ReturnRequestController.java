@@ -46,7 +46,7 @@ public class ReturnRequestController {
     }
 
     @GetMapping("/staff/returns")
-    @PreAuthorize("hasAuthority('PERM_orders.read')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER') and hasAuthority('PERM_orders.read')")
     public ApiResponse<List<Map<String, Object>>> staffQueue(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") @Min(0) int page,
@@ -55,7 +55,7 @@ public class ReturnRequestController {
     }
 
     @PatchMapping("/staff/returns/{returnId}/decision")
-    @PreAuthorize("hasAuthority('PERM_orders.write')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER') and hasAuthority('PERM_orders.write')")
     public ApiResponse<Map<String, Object>> decide(Authentication authentication,
             @PathVariable @Min(1) long returnId,
             @Valid @RequestBody ReturnDecisionPayload payload) {
@@ -64,7 +64,7 @@ public class ReturnRequestController {
     }
 
     @PostMapping("/staff/returns/{returnId}/receive")
-    @PreAuthorize("hasAuthority('PERM_orders.write')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER') and hasAuthority('PERM_orders.write')")
     public ApiResponse<Map<String, Object>> receive(Authentication authentication,
             @PathVariable @Min(1) long returnId,
             @RequestBody(required = false) Map<String, String> body) {

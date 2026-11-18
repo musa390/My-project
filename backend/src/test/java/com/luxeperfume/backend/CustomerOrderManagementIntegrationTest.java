@@ -46,6 +46,11 @@ class CustomerOrderManagementIntegrationTest {
         mockMvc.perform(get("/api/v1/notifications").cookie(other.access()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(0));
+        mockMvc.perform(patch("/api/v1/notifications/" + notificationId + "/read")
+                .with(csrf()).cookie(other.access()))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/staff/returns").cookie(owner.access()))
+            .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/api/v1/orders").cookie(owner.access()))
             .andExpect(status().isOk())
