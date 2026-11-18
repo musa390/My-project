@@ -26,7 +26,7 @@ export function ManagementWorkspace({section}:{section:string}) {
  const [notice,setNotice]=useState("");
  const [formOpen,setFormOpen]=useState(false);
  const [editing,setEditing]=useState<number|null>(null);
- const [draft,setDraft]=useState({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",roleCodes:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0",roleCodes:""});
+ const [draft,setDraft]=useState({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0",roleCodes:""});
  const title=titles[section]||titles[key]||"Management";
 
  const load=useCallback(async()=>{
