@@ -47,7 +47,7 @@ class CustomerAddressIntegrationTest {
 
         List<Map<String,Object>> addresses = controller.list(authentication).data();
         assertThat(addresses).hasSize(1);
-        assertThat(addresses.getFirst()).containsEntry("id", addressId);
+        assertThat(((Number) addresses.getFirst().get("id")).longValue()).isEqualTo(addressId);
 
         controller.delete(authentication, addressId);
         assertThat(controller.list(authentication).data()).isEmpty();
