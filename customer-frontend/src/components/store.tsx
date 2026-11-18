@@ -7,7 +7,7 @@ import type {ReactNode,FormEvent} from "react";
 import {ShoppingBag,Search,UserRound,Heart,Menu,X,ArrowRight,Instagram,Facebook,Minus,Plus,Trash2,CheckCircle2} from "lucide-react";
 import type {Product} from "@/lib/products";
 import {money,productPrice,productStock} from "@/lib/products";
-import {getCatalog,getProduct,getCart,getWishlist,addCartItem,updateCartItem,removeCartItem,addWishlistItem,removeWishlistItem} from "@/lib/commerce";
+import {getCatalog,getProduct,getCuratedProducts,getCart,getWishlist,addCartItem,updateCartItem,removeCartItem,addWishlistItem,removeWishlistItem} from "@/lib/commerce";
 import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
@@ -414,15 +414,15 @@ export function PoliciesPage(){return <main className="page wrap narrow"><div cl
 // Phase 1 route additions. These are frontend-only demo pages; persistence and
 // authentication will be connected during the backend phase.
 export function BestSellersPage(){
- const {products}=useStore();
- const featured=products.filter(p=>p.badge?.toLowerCase().includes('best')||p.rating>=4.8);
- return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">CUSTOMER FAVOURITES</span><h1>Our <em>Best Sellers</em></h1><p>Fragrances customers return to, again and again.</p></div><div className="product-grid">{featured.map(p=><ProductCard key={p.id} p={p}/>)}</div></main>;
+ const [featured,setFeatured]=useState<Product[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");
+ useEffect(()=>{let active=true;getCuratedProducts("best-sellers").then(async refs=>{const values=await Promise.all(refs.map(async(ref,index)=>toStoreProduct({...await getProduct(ref.slug),...ref},index)));if(active)setFeatured(values);}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:"Best sellers could not be loaded.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
+ return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">CUSTOMER FAVOURITES</span><h1>Our <em>Best Sellers</em></h1><p>Ranked by completed order item quantities in the store database.</p></div>{loading?<p className="muted">Loading best sellers…</p>:error?<p className="form-error" role="alert">{error}</p>:featured.length?<div className="product-grid">{featured.map(p=><ProductCard key={p.id} p={p}/>)}</div>:<div className="empty-state"><h2>No best sellers yet</h2><p>Completed orders will determine this list.</p></div>}</main>;
 }
 export function NewArrivalsPage(){
- const {products}=useStore();
- const [sort,setSort]=useState("featured");
- const latest=useMemo(()=>{const list=products.filter(p=>p.badge?.toLowerCase()==="new");if(sort==="low")list.sort((a,b)=>a.price-b.price);if(sort==="high")list.sort((a,b)=>b.price-a.price);if(sort==="rating")list.sort((a,b)=>b.rating-a.rating);return list;},[sort]);
- return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">JUST ARRIVED</span><h1>New <em>Arrivals</em></h1><p>Discover the latest additions to the LUXE fragrance edit.</p></div><div className="shop-tools new-arrivals-tools"><label htmlFor="new-arrivals-sort">Sort arrivals</label><select id="new-arrivals-sort" value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Featured</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option><option value="rating">Highest rated</option></select></div><div className="product-grid">{latest.map(p=><ProductCard key={p.id} p={p}/>)}</div>{!latest.length&&<p className="muted">New fragrances will appear here soon.</p>}</main>;
+ const [sort,setSort]=useState("featured");const [latest,setLatest]=useState<Product[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");
+ useEffect(()=>{let active=true;getCuratedProducts("new-arrivals").then(async refs=>{const values=await Promise.all(refs.map(async(ref,index)=>toStoreProduct({...await getProduct(ref.slug),...ref},index)));if(active)setLatest(values);}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:"New arrivals could not be loaded.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
+ const sorted=useMemo(()=>{const list=[...latest];if(sort==="low")list.sort((a,b)=>a.price-b.price);if(sort==="high")list.sort((a,b)=>b.price-a.price);return list;},[sort,latest]);
+ return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">JUST ARRIVED</span><h1>New <em>Arrivals</em></h1><p>Products created in the last 30 days in the live catalogue.</p></div><div className="shop-tools new-arrivals-tools"><label htmlFor="new-arrivals-sort">Sort arrivals</label><select id="new-arrivals-sort" value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Newest</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></div>{loading?<p className="muted">Loading new arrivals…</p>:error?<p className="form-error" role="alert">{error}</p>:sorted.length?<div className="product-grid">{sorted.map(p=><ProductCard key={p.id} p={p}/>)}</div>:<p className="muted">No products have been added in the last 30 days.</p>}</main>;
 }
 export function SearchPage(){
  const {products,catalogLoading,catalogError}=useStore();
