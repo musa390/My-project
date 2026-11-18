@@ -11,12 +11,18 @@ export type CurrentUser = {
 type SessionResponse = { success: boolean; sessionId?: string };
 type CurrentUserResponse = { success: boolean; user: CurrentUser };
 
+function announceSessionChange(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("luxe:session-changed"));
+}
+
 export async function signIn(email: string, password: string): Promise<CurrentUser> {
   await apiRequest<SessionResponse>("/api/v1/auth/login", {
     method: "POST",
     body: { email: email.trim().toLowerCase(), password },
   });
-  return getCurrentUser();
+  const user = await getCurrentUser();
+  announceSessionChange();
+  return user;
 }
 
 export async function registerAccount(input: {
@@ -34,7 +40,9 @@ export async function registerAccount(input: {
       lastName: input.lastName.trim(),
     },
   });
-  return getCurrentUser();
+  const user = await getCurrentUser();
+  announceSessionChange();
+  return user;
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
@@ -44,6 +52,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
 
 export async function signOut(): Promise<void> {
   await logoutSession();
+  announceSessionChange();
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
