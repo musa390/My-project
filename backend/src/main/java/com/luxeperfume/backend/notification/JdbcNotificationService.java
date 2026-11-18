@@ -3,6 +3,7 @@ package com.luxeperfume.backend.notification;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.context.ApplicationEventPublisher;
 import com.luxeperfume.backend.integration.email.OrderEmailEvent;
+import com.luxeperfume.backend.integration.email.OrderStatusEmailEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +55,7 @@ public class JdbcNotificationService implements NotificationService {
     public void orderCancelled(long userId, long orderId) {
         publish(userId, "order-cancelled:" + orderId, orderId,
                 "notification.order.cancelled.title", "notification.order.cancelled.body");
+        publishStatusEmail(userId, orderId, "CANCELLED");
     }
 
     @Override
@@ -65,6 +67,14 @@ public class JdbcNotificationService implements NotificationService {
         }
         publish(userId, "order-status:" + orderId + ":" + normalized, orderId,
                 "notification.order.status.title", "notification.order.status." + normalized.toLowerCase(Locale.ROOT));
+        publishStatusEmail(userId, orderId, normalized);
+    }
+
+    private void publishStatusEmail(long userId, long orderId, String status) {
+        Map<String, Object> order = jdbc.queryForMap(
+                "SELECT order_number,customer_email FROM customer_orders WHERE id=? AND user_id=?", orderId, userId);
+        events.publishEvent(new OrderStatusEmailEvent((String) order.get("customer_email"),
+                (String) order.get("order_number"), status));
     }
 
     private void publish(long userId, String eventKey, long orderId, String titleKey, String messageKey) {
