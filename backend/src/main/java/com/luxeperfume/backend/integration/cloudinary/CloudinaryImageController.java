@@ -11,6 +11,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,6 +24,7 @@ import java.util.HexFormat;
 import java.util.Map;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/staff/catalog/images")
 public class CloudinaryImageController {
     private final JdbcTemplate jdbc; private final RestClient client=RestClient.create();
@@ -32,6 +35,7 @@ public class CloudinaryImageController {
     }
     @PostMapping(value="/upload",consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('PERM_products.write')")
+    @Transactional
     public ApiResponse<Map<String,Object>> upload(@RequestParam long productId,@RequestParam(defaultValue="") @Size(max=255) String altText,
             @RequestParam(defaultValue="0") int sortOrder,@RequestParam(defaultValue="false") boolean primary,
             @RequestPart("file") MultipartFile file) {
@@ -45,7 +49,7 @@ public class CloudinaryImageController {
         long timestamp=Instant.now().getEpochSecond(); String folder="luxe-perfume/products";
         String signature=sign("folder="+folder+"&timestamp="+timestamp);
         ByteArrayResource resource;
-        try { byte[] bytes=file.getBytes();resource=new ByteArrayResource(bytes){@Override public String getFilename(){return file.getOriginalFilename()==null?"product-image":file.getOriginalFilename();}}; }
+        try { byte[] bytes=file.getBytes();resource=new ByteArrayResource(bytes){@Override public String getFilename(){return "product-image";}}; }
         catch(Exception ex){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Could not read image file");}
         MultiValueMap<String,Object> form=new LinkedMultiValueMap<>();
         form.add("file",resource);form.add("api_key",apiKey);form.add("timestamp",String.valueOf(timestamp));form.add("folder",folder);form.add("signature",signature);
