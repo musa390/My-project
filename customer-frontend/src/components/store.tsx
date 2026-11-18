@@ -301,7 +301,6 @@ export function AuthPage({mode}:{mode:"login"|"register"}){
  const [messageError,setMessageError]=useState(false);
  const [busy,setBusy]=useState(false);
  const isRegister=mode==="register";
- const router=useRouter();
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();
   setMessage("");
@@ -326,8 +325,7 @@ export function AuthPage({mode}:{mode:"login"|"register"}){
    }else{
     await signIn(String(data.get("email")||""),password);
    }
-   router.replace("/account");
-   router.refresh();
+   window.location.assign("/account");
   }catch(error){
    setMessage(error instanceof Error?error.message:"Authentication failed. Please try again.");
    setMessageError(true);
