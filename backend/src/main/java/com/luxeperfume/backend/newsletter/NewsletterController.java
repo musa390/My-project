@@ -55,15 +55,30 @@ public class NewsletterController {
     }
     @GetMapping("/confirm")
     public ApiResponse<Map<String,Object>> confirm(@RequestParam @NotBlank String token) {
+        String tokenHash=sha256(token);
+        var addresses=jdbc.query("SELECT email FROM newsletter_subscribers WHERE confirmation_token_hash=? AND confirmation_expires_at>UTC_TIMESTAMP() AND subscription_status='PENDING'",
+                (rs,row)->rs.getString(1),tokenHash);
+        if(addresses.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Confirmation link is invalid or expired");
+        String address=addresses.getFirst();
         String unsubscribe=token();
         int changed=jdbc.update("""
             UPDATE newsletter_subscribers SET subscription_status='SUBSCRIBED',confirmed_at=UTC_TIMESTAMP(),
                 confirmation_token_hash=NULL,confirmation_expires_at=NULL,unsubscribe_token_hash=?
             WHERE confirmation_token_hash=? AND confirmation_expires_at>UTC_TIMESTAMP() AND subscription_status='PENDING'
-            """,sha256(unsubscribe),sha256(token));
+            """,sha256(unsubscribe),tokenHash);
         if(changed!=1) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Confirmation link is invalid or expired");
-        // Store only a hash; the token is returned once so the storefront can retain an unsubscribe link.
-        return ApiResponse.success("Newsletter subscription confirmed.",Map.of("subscribed",true,"unsubscribeToken",unsubscribe));
+        try {
+            email.sendText(address,"Welcome to the LUXE PERFUME newsletter",
+                    "Your subscription is confirmed. You can unsubscribe at any time: "
+                            +siteUrl+"/api/v1/newsletter/unsubscribe?token="+unsubscribe);
+        } catch(RuntimeException ex) {
+            // Subscription remains active; the one-time unsubscribe token remains stored as a hash.
+        }
+        return ApiResponse.success("Newsletter subscription confirmed.",Map.of("subscribed",true));
+    }
+    @GetMapping("/unsubscribe")
+    public ApiResponse<Map<String,Object>> unsubscribeByLink(@RequestParam @NotBlank String token) {
+        return unsubscribe(new TokenRequest(token));
     }
     @PostMapping("/unsubscribe")
     public ApiResponse<Map<String,Object>> unsubscribe(@Valid @RequestBody TokenRequest request) {
