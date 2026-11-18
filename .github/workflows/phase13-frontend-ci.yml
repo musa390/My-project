@@ -1,0 +1,53 @@
+name: Phase 13 Frontend Integration CI
+
+on:
+  push:
+    branches: ["phase13/**"]
+    paths:
+      - "customer-frontend/**"
+      - "admin-frontend/**"
+      - ".github/workflows/phase13-frontend-ci.yml"
+  pull_request:
+    branches: ["phase12/additional-integrations"]
+    paths:
+      - "customer-frontend/**"
+      - "admin-frontend/**"
+      - ".github/workflows/phase13-frontend-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  customer-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: customer-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: customer-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run verify:phase6
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+
+  admin-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: admin-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run verify:phase3
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
