@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import {useRouter,usePathname,useSearchParams} from "next/navigation";
+import {useRouter,usePathname} from "next/navigation";
 import {useEffect,useMemo,useState,createContext,useContext} from "react";
 import type {ReactNode,FormEvent} from "react";
 import {ShoppingBag,Search,UserRound,Heart,Menu,X,ArrowRight,Instagram,Facebook,Minus,Plus,Trash2,CheckCircle2} from "lucide-react";
@@ -434,24 +434,26 @@ export function SearchPage(){
  return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">FIND YOUR FRAGRANCE</span><h1>Search <em>LUXE</em></h1><p>Search by fragrance name, brand, collection, scent notes or fragrance family.</p></div><form className="search-form" onSubmit={e=>e.preventDefault()}><Search size={18}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Try oud, rose, amber..." aria-label="Search fragrances"/><button className="gold-btn" type="submit">SEARCH</button></form>{ready&&query.trim()&&results.length>0&&<div className="search-suggestions" aria-label="Search suggestions">{results.slice(0,5).map(p=><Link key={p.id} href={`/products/${p.slug}`}><span>{p.name}</span><small>{p.brand} · {p.collection}</small></Link>)}</div>}{ready&&<><p className="muted">{query?`${results.length} result(s) for “${query}”`:`Explore all ${results.length} fragrances`}</p>{results.length?<div className="product-grid">{results.map(p=><ProductCard key={p.id} p={p}/>)}</div>:<div className="empty-state"><Search size={38}/><h2>No matching fragrances</h2><p>We couldn&apos;t find a perfume matching “{query}”. Try another product name or scent note.</p><button className="outline-btn" onClick={()=>setQuery('')}>CLEAR SEARCH</button></div>}</>}</main>;
 }
 export function OrderSuccessPage(){
- const params=useSearchParams();const orderNumber=params.get("order")||"";
+ const [orderNumber,setOrderNumber]=useState("");
+ useEffect(()=>{setOrderNumber(new URLSearchParams(window.location.search).get("order")||"");},[]);
  const [order,setOrder]=useState<Record<string,unknown>|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState("");
  useEffect(()=>{let active=true;if(!orderNumber){setLoading(false);return;}getOrder(orderNumber).then(value=>{if(active)setOrder(value);}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:"Order details could not be loaded.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[orderNumber]);
  const items=Array.isArray(order?.items)?order.items as Array<Record<string,unknown>>:[];
  return <main className="page wrap"><div className="success-box"><CheckCircle2 size={54}/><span className="eyebrow gold">ORDER RECEIVED</span><h1>Thank you for choosing <em>LUXE.</em></h1>{loading?<p className="muted">Loading your order confirmation…</p>:error?<p className="form-error" role="alert">{error}</p>:order?<><p>Your order reference is <b>{String(order.orderNumber||orderNumber)}</b>.</p><div className="order-detail-panel"><h3>Order summary</h3><p><b>Status:</b> {String(order.orderStatus||"PENDING")}</p><p><b>Payment status:</b> {String(order.paymentStatus||"UNPAID")} · Cash on Delivery</p><p><b>Order total:</b> {money(Number(order.grandTotal||0))}</p><p><b>Delivery to:</b> {String(order.shippingRecipient||"")}, {String(order.shippingAddressLine1||"")}, {String(order.shippingCity||"")}</p>{items.map((item,index)=><p key={String(item.id||index)}>{String(item.productNameSnapshot||"Product")} · {String(item.variantNameSnapshot||"")} × {String(item.quantity||1)} — {money(Number(item.lineTotal||0))}</p>)}</div><p className="muted small">Your order and inventory reservation were saved by the backend.</p><div className="account-links"><Link className="outline-btn" href={"/track-order?order="+encodeURIComponent(orderNumber)}>TRACK ORDER <ArrowRight/></Link><Link className="gold-btn" href="/my-orders">MY ORDERS</Link></div></>:<><p>No order reference was supplied.</p><Link className="gold-btn" href="/my-orders">VIEW MY ORDERS</Link></>}</div></main>;
 }
 export function TrackOrderPage(){
- const params=useSearchParams();const [orderNumber,setOrderNumber]=useState(params.get("order")||"");
+ const [orderNumber,setOrderNumber]=useState("");
  const [result,setResult]=useState<Record<string,unknown>|null>(null);const [loading,setLoading]=useState(false);const [error,setError]=useState("");
- async function lookup(event?:FormEvent<HTMLFormElement>){
-  event?.preventDefault();setError("");setResult(null);
-  const number=orderNumber.trim();if(!number){setError("Enter your order reference.");return;}
-  setLoading(true);
-  try{setResult(await getOrderTracking(number));}
+ async function loadNumber(number:string){
+  setError("");setResult(null);if(!number.trim())return;setLoading(true);
+  try{setResult(await getOrderTracking(number.trim()));}
   catch(reason){setError(reason instanceof Error?reason.message:"Order tracking could not be loaded. Sign in and verify the order reference.");}
   finally{setLoading(false);}
  }
- useEffect(()=>{const number=params.get("order");if(number){setOrderNumber(number);void lookup();}},[]);
+ async function lookup(event?:FormEvent<HTMLFormElement>){
+  event?.preventDefault();const number=orderNumber.trim();if(!number){setError("Enter your order reference.");return;}await loadNumber(number);
+ }
+ useEffect(()=>{const number=new URLSearchParams(window.location.search).get("order")||"";if(number){setOrderNumber(number);void loadNumber(number);}},[]);
  const events=Array.isArray(result?.events)?result.events as Array<Record<string,unknown>>:[];
  return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">ORDER SUPPORT</span><h1>Track Your <em>Order</em></h1><p>Enter the order reference from your confirmation email or My Orders page.</p></div><form className="form-panel track-form" onSubmit={lookup}><label>Order reference<input required value={orderNumber} onChange={e=>setOrderNumber(e.target.value)} placeholder="LUX…"/></label><button className="gold-btn" type="submit" disabled={loading}>{loading?"LOADING…":"TRACK ORDER"} <ArrowRight/></button>{error&&<p className="form-error" role="alert">{error}</p>}{result&&<div className="tracking-result"><div className="order-card-head"><div><span className="eyebrow gold">ORDER REFERENCE</span><h2>{String(result.orderNumber||orderNumber)}</h2></div><span className="order-status">{String(result.currentStatus||"")}</span></div><h3 className="tracking-title">Order status history</h3>{events.length?<ol className="status-timeline">{events.map((event,index)=><li className="complete" key={String(event.id||index)}><b>{String(event.toStatus||event.to_status||"Status updated")}</b><span>{String(event.note||"")}</span><small>{String(event.createdAt||event.created_at||"")}</small></li>)}</ol>:<p className="muted small">No additional status events have been recorded yet.</p>}</div>}</form></main>;
 }
