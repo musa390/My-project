@@ -19,7 +19,11 @@ public class ResendEmailService {
 
     public ResendEmailService(@Value("${app.security.email.resend-api-key:}") String apiKey,
             @Value("${app.security.email.from:onboarding@resend.dev}") String from) {
-        this.client = RestClient.builder().baseUrl("https://api.resend.com").build();
+        this(RestClient.builder(), apiKey, from);
+    }
+
+    public ResendEmailService(RestClient.Builder builder, String apiKey, String from) {
+        this.client = builder.baseUrl("https://api.resend.com").build();
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.from = from;
     }
