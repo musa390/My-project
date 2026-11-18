@@ -60,7 +60,7 @@ export function ManagementWorkspace({section}:{section:string}) {
  function resetForm(){setDraft({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0"});setEditing(null);setFormOpen(false);}
  function startEdit(row:Row){
   setEditing(Number(row.id));
-  setDraft({name:String(row.name||""),slug:String(row.slug||""),description:String(row.description||""),categoryId:String(row.category_id||""),brandId:String(row.brand_id||""),sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:""});
+  setDraft({name:String(row.name||row.code||row.title||""),slug:String(row.slug||""),description:String(row.description||row.subtitle||""),categoryId:String(row.category_id||""),brandId:String(row.brand_id||""),sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:String(row.discount_type||"PERCENTAGE"),discountValue:String(row.discount_value||"10"),minimumOrderAmount:String(row.minimum_order_amount||"0"),maximumDiscountAmount:String(row.maximum_discount_amount||""),usageLimit:String(row.usage_limit||""),perUserLimit:String(row.per_user_limit||""),startsAt:String(row.starts_at||""),endsAt:String(row.ends_at||""),imageUrl:String(row.image_url||""),targetUrl:String(row.target_url||""),placement:String(row.placement||"HOME_HERO"),sortOrder:String(row.sort_order||"0")});
   setFormOpen(true);
  }
  async function submit(event:FormEvent<HTMLFormElement>){
@@ -85,6 +85,12 @@ export function ManagementWorkspace({section}:{section:string}) {
       await adminApi.createVariant(Number(product.id),{sku:draft.sku.trim(),variantName:draft.variantName.trim(),price:Number(draft.price),volumeMl:Number(draft.variantName.match(/\d+(?:\.\d+)?/)?.[0]||0)||null,initialStock:Number(draft.initialStock||0),isDefault:true,isActive:true});
      }
     }
+   }else if(resource==="coupons"){
+    const body={code:draft.name.trim().toUpperCase(),description:draft.description.trim(),discountType:draft.discountType,discountValue:Number(draft.discountValue),minimumOrderAmount:Number(draft.minimumOrderAmount||0),maximumDiscountAmount:draft.maximumDiscountAmount?Number(draft.maximumDiscountAmount):null,usageLimit:draft.usageLimit?Number(draft.usageLimit):null,perUserLimit:draft.perUserLimit?Number(draft.perUserLimit):null,startsAt:draft.startsAt||null,endsAt:draft.endsAt||null,active:true};
+    if(editing)await adminApi.updateCoupon(editing,body);else await adminApi.createCoupon(body);
+   }else if(resource==="banners"){
+    const body={title:draft.name.trim(),subtitle:draft.description.trim(),imageUrl:draft.imageUrl.trim(),targetUrl:draft.targetUrl.trim()||null,placement:draft.placement,startsAt:draft.startsAt||null,endsAt:draft.endsAt||null,sortOrder:Number(draft.sortOrder||0),active:true};
+    if(editing)await adminApi.updateBanner(editing,body);else await adminApi.createBanner(body);
    }else if(resource==="inventory"){
     const variantId=Number(draft.categoryId);
     const delta=Number(draft.quantityChange);
@@ -106,6 +112,8 @@ export function ManagementWorkspace({section}:{section:string}) {
    else if(resource==="categories")await adminApi.archiveCategory(Number(row.id));
    else if(resource==="brands")await adminApi.archiveBrand(Number(row.id));
    else if(resource==="collections")await adminApi.archiveCollection(Number(row.id));
+   else if(resource==="coupons")await adminApi.deactivateCoupon(Number(row.id));
+   else if(resource==="banners")await adminApi.deactivateBanner(Number(row.id));
    else throw new Error("Archive is not supported for this resource.");
    setNotice("Record archived/deactivated in the database.");await load();
   }catch(reason){setError(reason instanceof Error?reason.message:"Archive failed.");}
@@ -138,7 +146,7 @@ export function ManagementWorkspace({section}:{section:string}) {
  if(!supported)return <section className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-8"><p className="text-xs uppercase tracking-[.2em] text-[var(--gold)]">Backend integration status</p><h1 className="mt-3 text-2xl font-semibold">{title}</h1><p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">{unsupported[section]||"This section has no corresponding backend endpoint yet."}</p><p className="mt-4 text-xs text-[#d2bd95]">No demo records are shown or changed here. This module remains pending until its secure backend API is implemented.</p></section>;
 
  return <div className="space-y-6">
-  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[.22em] text-[var(--gold)]">Live database · {resource}</p><h1 className="mt-2 text-3xl font-semibold">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Records below are retrieved from the authenticated LUXE backend API.</p></div><div className="flex gap-2"><button onClick={()=>void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2.5 text-sm"><RefreshCw size={15}/>Refresh</button>{["products","categories","brands","collections","inventory"].includes(resource)&&<button onClick={()=>{setEditing(null);setFormOpen(v=>!v);}} className="inline-flex items-center gap-2 rounded-lg bg-[var(--gold)] px-4 py-2.5 text-sm font-semibold text-[#17130d]"><Plus size={16}/>{formOpen?"Close":"Add new"}</button>}</div></div>
+  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[.22em] text-[var(--gold)]">Live database · {resource}</p><h1 className="mt-2 text-3xl font-semibold">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Records below are retrieved from the authenticated LUXE backend API.</p></div><div className="flex gap-2"><button onClick={()=>void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2.5 text-sm"><RefreshCw size={15}/>Refresh</button>{["products","categories","brands","collections","inventory","coupons","banners"].includes(resource)&&<button onClick={()=>{setEditing(null);setFormOpen(v=>!v);}} className="inline-flex items-center gap-2 rounded-lg bg-[var(--gold)] px-4 py-2.5 text-sm font-semibold text-[#17130d]"><Plus size={16}/>{formOpen?"Close":"Add new"}</button>}</div></div>
   <div className="rounded-xl border border-[#365b43] bg-[#122017] px-4 py-3 text-xs leading-5 text-[#b9d8c0]">LIVE API MODE — changes are sent to the backend. Server-side permissions, validation and business rules remain authoritative.</div>
   {error&&<div className="rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-200" role="alert">{error}</div>}
   {notice&&<div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-sm text-[#c7d9c7]" role="status">{notice}</div>}
