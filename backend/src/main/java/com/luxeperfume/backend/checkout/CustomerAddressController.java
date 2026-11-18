@@ -60,7 +60,7 @@ public class CustomerAddressController {
         long userId = customerId(authentication);
         findOwned(userId, addressId);
         if (request.makeDefault()) jdbc.update("UPDATE addresses SET is_default=FALSE WHERE user_id=?", userId);
-        int changed = jdbc.update("""
+        jdbc.update("""
                 UPDATE addresses SET label=?,recipient_name=?,phone=?,address_line1=?,address_line2=?,
                     area=?,city=?,district=?,postal_code=?,country_code=?,is_default=?
                 WHERE id=? AND user_id=?
@@ -68,7 +68,6 @@ public class CustomerAddressController {
                 request.addressLine1().trim(), blankToNull(request.addressLine2()), blankToNull(request.area()),
                 request.city().trim(), blankToNull(request.district()), blankToNull(request.postalCode()),
                 request.countryCode().toUpperCase(), request.makeDefault(), addressId, userId);
-        if (changed == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found");
         return ApiResponse.success("Delivery address updated", findOwned(userId, addressId));
     }
 
