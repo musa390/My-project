@@ -5,6 +5,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -104,10 +106,10 @@ public class StaffCouponController {
             @NotBlank @Size(max=60) @Pattern(regexp="^[A-Za-z0-9_-]+$") String code,
             @Size(max=255) String description,
             @NotBlank @Pattern(regexp="PERCENTAGE|FIXED") String discountType,
-            @DecimalMin("0.01") BigDecimal discountValue,
+            @NotNull @DecimalMin("0.01") BigDecimal discountValue,
             @DecimalMin("0.00") BigDecimal minimumOrderAmount,
             BigDecimal maximumDiscountAmount,
-            Integer usageLimit,Integer perUserLimit,
+            @Positive Integer usageLimit,@Positive Integer perUserLimit,
             LocalDateTime startsAt,LocalDateTime endsAt,boolean active
     ){}
 }
