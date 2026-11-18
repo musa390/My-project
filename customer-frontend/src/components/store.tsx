@@ -12,7 +12,8 @@ import {getCurrentUser} from "@/lib/auth";
 import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact, contactFormMode} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
-import {signIn, registerAccount} from "@/lib/auth";
+import {signIn, registerAccount, getCurrentUser, signOut} from "@/lib/auth";
+import {getAddresses,createAddress,deleteAddress,setDefaultAddress,type Address} from "@/lib/commerce";
 
 type CartLine = { id: string; qty: number; size?: string; cartItemId?: number; variantId?: number };
 type ResolvedCartLine = CartLine & { p: Product };
@@ -364,48 +365,52 @@ const normalizeBdPhone = (value: string) => {
 };
 const isSavedAddressList = (value: unknown): value is SavedAddress[] => Array.isArray(value) && value.every((item) => item && typeof item.id === "string" && typeof item.label === "string" && typeof item.name === "string" && typeof item.phone === "string" && typeof item.division === "string" && typeof item.district === "string" && typeof item.area === "string" && typeof item.fullAddress === "string" && typeof item.postalCode === "string");
 export function AccountPage(){
- const [profile,setProfile]=useState<AccountProfile>({name:"",email:"",phone:""});
- const [address,setAddress]=useState<Omit<SavedAddress,"id">>({label:"Home",name:"",phone:"",division:"",district:"",area:"",fullAddress:"",postalCode:""});
- const [addresses,setAddresses]=useState<SavedAddress[]>([]);const [message,setMessage]=useState("");const [messageError,setMessageError]=useState(false);const [ready,setReady]=useState(false);
- useEffect(()=>{
+ const router=useRouter();
+ const [profile,setProfile]=useState<{name:string;email:string}>({name:"",email:""});
+ const [addresses,setAddresses]=useState<Address[]>([]);
+ const [address,setAddress]=useState({label:"Home",name:"",phone:"",division:"Dhaka",district:"",area:"",fullAddress:"",postalCode:""});
+ const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);
+ const [message,setMessage]=useState("");const [messageError,setMessageError]=useState(false);
+ async function reload(){
+  const [user,saved]=await Promise.all([getCurrentUser(),getAddresses()]);
+  setProfile({name:[user.firstName,user.lastName].filter(Boolean).join(" "),email:user.email});
+  setAddresses(saved);
+ }
+ useEffect(()=>{let active=true;Promise.all([getCurrentUser(),getAddresses()]).then(([user,saved])=>{if(active){setProfile({name:[user.firstName,user.lastName].filter(Boolean).join(" "),email:user.email});setAddresses(saved);}}).catch(()=>{if(active){setMessage("Please sign in to view your account and saved addresses.");setMessageError(true);}}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
+ async function saveAddress(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();setMessage("");setMessageError(false);
+  const phone=address.phone.replace(/[\\s-]/g,"");
+  if(!bdPhonePattern.test(phone)){setMessage("Enter a valid Bangladesh mobile number.");setMessageError(true);return;}
+  if(address.postalCode&&!/^\\d{4}$/.test(address.postalCode)){setMessage("Postal code must contain four digits.");setMessageError(true);return;}
+  setSaving(true);
   try{
-   const rawProfile=localStorage.getItem("luxe-profile");
-   if(rawProfile){const parsed:unknown=JSON.parse(rawProfile);if(parsed&&typeof parsed==="object"&&"name" in parsed&&"email" in parsed&&"phone" in parsed){const value=parsed as AccountProfile;setProfile({name:String(value.name||""),email:String(value.email||""),phone:String(value.phone||"")});}}
-   const rawAddresses=localStorage.getItem("luxe-addresses");
-   if(rawAddresses){const parsed:unknown=JSON.parse(rawAddresses);if(isSavedAddressList(parsed))setAddresses(parsed);}
-  }catch{setMessage("Some saved account data could not be read. You can replace it by saving your details again.");setMessageError(true);}
-  finally{setReady(true);}
- },[]);
- function saveProfile(e:FormEvent<HTMLFormElement>){
-  e.preventDefault();setMessage("");setMessageError(false);
-  if(profile.phone.trim()&&!bdPhonePattern.test(profile.phone.replace(/[\s-]/g,""))){setMessage("Enter a valid Bangladesh mobile number or leave the phone field blank.");setMessageError(true);return;}
-  try{localStorage.setItem("luxe-profile",JSON.stringify(profile));setMessage("Profile information saved in this browser.");}
-  catch{setMessage("Could not save profile data. Browser storage may be unavailable or full.");setMessageError(true);}
+   await createAddress({label:address.label,recipient_name:address.name,phone,address_line1:address.fullAddress,address_line2:"",area:address.area,city:address.division,district:address.district,postal_code:address.postalCode,country_code:"BD",makeDefault:addresses.length===0});
+   setAddress({label:"Home",name:"",phone:"",division:"Dhaka",district:"",area:"",fullAddress:"",postalCode:""});
+   await reload();setMessage("Delivery address saved to your account.");
+  }catch(error){setMessage(error instanceof Error?error.message:"Could not save this address.");setMessageError(true);}
+  finally{setSaving(false);}
  }
- function saveAddress(e:FormEvent<HTMLFormElement>){
-  e.preventDefault();setMessage("");setMessageError(false);
-  const phone=address.phone.replace(/[\s-]/g,"");
-  if(!bdPhonePattern.test(phone)){setMessage("Enter a valid Bangladesh mobile number for this address.");setMessageError(true);return;}
-  if(address.postalCode&&!/^\d{4}$/.test(address.postalCode)){setMessage("Postal code is optional, but if entered it must contain exactly four digits.");setMessageError(true);return;}
-  const next:SavedAddress[]=[{...address,phone,id:`ADDR-${Date.now()}`},...addresses];
-  try{localStorage.setItem("luxe-addresses",JSON.stringify(next));setAddresses(next);setAddress({label:"Home",name:"",phone:"",division:"",district:"",area:"",fullAddress:"",postalCode:""});setMessage("Address saved in this browser.");}
-  catch{setMessage("Could not save this address. Browser storage may be unavailable or full.");setMessageError(true);}
+ async function removeAddress(id:number){
+  try{await deleteAddress(id);await reload();setMessage("Address deleted from your account.");setMessageError(false);}
+  catch(error){setMessage(error instanceof Error?error.message:"Could not delete this address.");setMessageError(true);}
  }
- function removeAddress(id:string){
-  const next=addresses.filter(item=>item.id!==id);
-  try{localStorage.setItem("luxe-addresses",JSON.stringify(next));setAddresses(next);setMessage("Saved address removed.");setMessageError(false);}
-  catch{setMessage("Could not update saved addresses in browser storage.");setMessageError(true);}
+ async function makeDefault(id:number){
+  try{await setDefaultAddress(id);await reload();setMessage("Default delivery address updated.");setMessageError(false);}
+  catch(error){setMessage(error instanceof Error?error.message:"Could not update the default address.");setMessageError(true);}
  }
- function clearLocalAccount(){
-  try{localStorage.removeItem("luxe-profile");localStorage.removeItem("luxe-addresses");setProfile({name:"",email:"",phone:""});setAddresses([]);setMessage("Local profile and saved addresses cleared from this browser. No login session was active.");setMessageError(false);}
-  catch{setMessage("Could not clear all account data from browser storage.");setMessageError(true);}
+ async function logout(){
+  try{await signOut();router.replace("/login");router.refresh();}
+  catch(error){setMessage(error instanceof Error?error.message:"Could not sign out.");setMessageError(true);}
  }
- if(!ready)return <main className="page wrap narrow"><p className="muted">Loading account details…</p></main>;
- return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">YOUR LUXE ACCOUNT</span><h1>Account <em>Profile</em></h1><p>Manage your profile information and saved delivery addresses on this browser.</p></div>
- <section className="form-panel account-section"><div className="account-section-head"><div className="account-profile-heading"><span className="account-avatar"><UserRound size={24}/></span><div><h2>Profile information</h2><small className="muted">Profile photo placeholder · add a real upload flow with a future account service</small></div></div><span className="eyebrow gold">LOCAL PROFILE</span></div><form onSubmit={saveProfile} className="form-grid"><label>Full name<input required minLength={2} value={profile.name} onChange={e=>setProfile({...profile,name:e.target.value})} placeholder="Your full name"/></label><label>Email address<input type="email" value={profile.email} onChange={e=>setProfile({...profile,email:e.target.value})} placeholder="you@example.com"/></label><label>Phone number<input type="tel" value={profile.phone} onChange={e=>setProfile({...profile,phone:e.target.value})} placeholder="01XXXXXXXXX"/></label><div className="full"><button className="gold-btn" type="submit">SAVE PROFILE</button></div></form></section>
- <section className="form-panel account-section"><div className="account-section-head"><h2>Saved addresses</h2><span className="eyebrow gold">{addresses.length} SAVED</span></div>{addresses.length?addresses.map(item=><article className="saved-address" key={item.id}><div><b>{item.label} · {item.name}</b><p>{item.phone}<br/>{item.fullAddress}, {item.area}, {item.district}, {item.division} {item.postalCode}</p></div><button className="text-btn" type="button" onClick={()=>removeAddress(item.id)}>REMOVE</button></article>):<p className="muted small">No saved address yet. Add an address below.</p>}
- <form onSubmit={saveAddress} className="form-grid address-form"><label>Address label<select value={address.label} onChange={e=>setAddress({...address,label:e.target.value})}><option>Home</option><option>Work</option><option>Other</option></select></label><label>Recipient name<input required minLength={2} value={address.name} onChange={e=>setAddress({...address,name:e.target.value})}/></label><label>Phone<input required type="tel" value={address.phone} onChange={e=>setAddress({...address,phone:e.target.value})} placeholder="01XXXXXXXXX"/></label><label>Division<input required value={address.division} onChange={e=>setAddress({...address,division:e.target.value})}/></label><label>District<input required value={address.district} onChange={e=>setAddress({...address,district:e.target.value})}/></label><label>Area / Thana<input required value={address.area} onChange={e=>setAddress({...address,area:e.target.value})}/></label><label className="full">Full address<input required minLength={8} value={address.fullAddress} onChange={e=>setAddress({...address,fullAddress:e.target.value})}/></label><label>Postal code (optional)<input inputMode="numeric" pattern="[0-9]{4}" maxLength={4} value={address.postalCode} onChange={e=>setAddress({...address,postalCode:e.target.value})}/></label><div className="full"><button className="outline-btn" type="submit">ADD SAVED ADDRESS <Plus size={14}/></button></div></form></section>
- {message&&<p className={messageError?"form-error":"success-text"} role={messageError?"alert":"status"}>{message}</p>}<div className="account-links"><Link className="outline-btn" href="/login">GOOGLE SIGN-IN SETUP <ArrowRight size={14}/></Link><Link className="outline-btn" href="/my-orders">MY ORDERS <ArrowRight size={14}/></Link><Link className="outline-btn" href="/wishlist">MY WISHLIST <Heart size={14}/></Link><button className="text-btn logout-disabled" type="button" disabled title="No authenticated session exists">LOGOUT · NO ACTIVE SESSION</button><button className="text-btn" type="button" onClick={clearLocalAccount}>CLEAR PROFILE & ADDRESS DATA</button></div> <p className="muted small">Privacy note: profile and address information is stored in this browser&apos;s Local Storage. It is not synced to a server or shared across devices. There is no authenticated session in this frontend-only demo, so a real logout is not available.</p></main>;
+ if(loading)return <main className="page wrap narrow"><p className="muted">Loading your account…</p></main>;
+ return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">YOUR LUXE ACCOUNT</span><h1>Account <em>Profile</em></h1><p>Your account information and delivery addresses are securely stored by LUXE.</p></div>
+  <section className="form-panel account-section"><div className="account-section-head"><div className="account-profile-heading"><span className="account-avatar"><UserRound size={24}/></span><div><h2>{profile.name||"Customer"}</h2><small className="muted">{profile.email}</small></div></div><span className="eyebrow gold">AUTHENTICATED</span></div><p className="muted small">Your identity is read from the authenticated backend session. Profile editing can be enabled when a profile-update API is added.</p></section>
+  <section className="form-panel account-section"><div className="account-section-head"><h2>Saved addresses</h2><span className="eyebrow gold">{addresses.length} SAVED</span></div>{addresses.length?addresses.map(item=><article className="saved-address" key={item.id}><div><b>{item.label||"Address"} · {item.recipient_name}</b><p>{item.phone}<br/>{item.address_line1}{item.address_line2?", "+item.address_line2:""}, {item.area}, {item.city}, {item.district} {item.postal_code}</p>{item.is_default&&<small className="success-text">DEFAULT ADDRESS</small>}</div><div className="flex gap-3"><button className="text-btn" type="button" disabled={item.is_default} onClick={()=>void makeDefault(item.id)}>MAKE DEFAULT</button><button className="text-btn" type="button" onClick={()=>void removeAddress(item.id)}>REMOVE</button></div></article>):<p className="muted small">No saved address yet. Add one below.</p>}
+   <form onSubmit={saveAddress} className="form-grid address-form"><label>Address label<select value={address.label} onChange={e=>setAddress({...address,label:e.target.value})}><option>Home</option><option>Work</option><option>Other</option></select></label><label>Recipient name<input required minLength={2} value={address.name} onChange={e=>setAddress({...address,name:e.target.value})}/></label><label>Phone<input required type="tel" value={address.phone} onChange={e=>setAddress({...address,phone:e.target.value})} placeholder="01XXXXXXXXX"/></label><label>Division / City<input required value={address.division} onChange={e=>setAddress({...address,division:e.target.value})}/></label><label>District<input required value={address.district} onChange={e=>setAddress({...address,district:e.target.value})}/></label><label>Area / Thana<input required value={address.area} onChange={e=>setAddress({...address,area:e.target.value})}/></label><label className="full">Full address<input required minLength={8} value={address.fullAddress} onChange={e=>setAddress({...address,fullAddress:e.target.value})}/></label><label>Postal code (optional)<input inputMode="numeric" pattern="[0-9]{4}" maxLength={4} value={address.postalCode} onChange={e=>setAddress({...address,postalCode:e.target.value})}/></label><div className="full"><button className="outline-btn" type="submit" disabled={saving}>{saving?"SAVING…":"ADD SAVED ADDRESS"} <Plus size={14}/></button></div></form>
+  </section>
+  {message&&<p className={messageError?"form-error":"success-text"} role={messageError?"alert":"status"}>{message}</p>}
+  <div className="account-links"><Link className="outline-btn" href="/my-orders">MY ORDERS <ArrowRight size={14}/></Link><Link className="outline-btn" href="/wishlist">MY WISHLIST <Heart size={14}/></Link><button className="text-btn" type="button" onClick={()=>void logout()}>SIGN OUT</button></div>
+ </main>;
 }
 export function OrdersPage(){
  const [orders,setOrders]=useState<DemoOrder[]>([]);const [ready,setReady]=useState(false);const [expanded,setExpanded]=useState<string|null>(null);
