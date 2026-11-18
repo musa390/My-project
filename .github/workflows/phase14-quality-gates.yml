@@ -156,16 +156,16 @@ jobs:
       matrix:
         include:
           - language: java-kotlin
-            build-mode: ${{ matrix.build-mode }}
+            build_mode: ${{ matrix.build_mode }}
           - language: javascript-typescript
-            build-mode: none
+            build_mode: none
     steps:
       - uses: actions/checkout@v4
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build-mode: autobuild
+          build_mode: autobuild
       - name: Analyze source
         uses: github/codeql-action/analyze@v3
         with:
