@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Package, ShoppingBag, Users, Boxes, Tags, Star, ChartNoAxesCombined, Settings, ShieldCheck, Layers3, Store, CreditCard, Image, Mail, UserCog, Shapes, Menu, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Users, Boxes, Tags, Star, ChartNoAxesCombined, Settings, ShieldCheck, Layers3, Store, CreditCard, Image, Mail, UserCog, Shapes, Menu, LogOut, MessageSquare, RotateCcw } from "lucide-react";
 import { getStaffCurrentUser, signOutAdmin, type AdminSessionUser } from "@/lib/auth";
 
 const nav=[
@@ -13,6 +13,8 @@ const nav=[
  {href:"/brands",label:"Brands",icon:Store},
  {href:"/collections",label:"Collections",icon:Layers3},
  {href:"/orders",label:"Orders",icon:ShoppingBag},
+ {href:"/returns",label:"Returns",icon:RotateCcw},
+ {href:"/contact-messages",label:"Contact Messages",icon:MessageSquare},
  {href:"/customers",label:"Customers",icon:Users},
  {href:"/inventory",label:"Inventory",icon:Boxes},
  {href:"/payments",label:"Payments",icon:CreditCard},
