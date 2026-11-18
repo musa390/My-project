@@ -2,6 +2,7 @@ package com.luxeperfume.backend.checkout;
 
 import com.luxeperfume.backend.checkout.dto.OrderStatusUpdateRequest;
 import com.luxeperfume.backend.checkout.policy.OrderStatusTransitionPolicy;
+import com.luxeperfume.backend.notification.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -18,10 +19,13 @@ public class StaffOrderApplicationService {
     private static final int MAX_PAGE_SIZE = 100;
     private final JdbcTemplate jdbc;
     private final OrderStatusTransitionPolicy transitionPolicy;
+    private final NotificationService notificationService;
 
-    public StaffOrderApplicationService(JdbcTemplate jdbc, OrderStatusTransitionPolicy transitionPolicy) {
+    public StaffOrderApplicationService(JdbcTemplate jdbc, OrderStatusTransitionPolicy transitionPolicy,
+                                        NotificationService notificationService) {
         this.jdbc = jdbc;
         this.transitionPolicy = transitionPolicy;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +104,7 @@ public class StaffOrderApplicationService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> updateStatus(String orderNumber, long actorId, OrderStatusUpdateRequest request) {
         Map<String, Object> order = oneOrNull("""
-                SELECT id,order_number,order_status,payment_status
+                SELECT id,order_number,user_id,order_status,payment_status
                 FROM customer_orders WHERE order_number=? FOR UPDATE
                 """, orderNumber);
         if (order == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
@@ -110,6 +114,10 @@ public class StaffOrderApplicationService {
         String target = request.status().trim().toUpperCase();
         String payment = (String) order.get("payment_status");
 
+        if ("RETURNED".equals(target)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Use the approved return-request workflow to mark an order as returned");
+        }
         if (!transitionPolicy.mayTransition(current, target)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Invalid order status transition: " + current + " -> " + target);
@@ -172,6 +180,9 @@ public class StaffOrderApplicationService {
                 INSERT INTO order_status_history(order_id,from_status,to_status,note,changed_by)
                 VALUES(?,?,?,?,?)
                 """, orderId, current, target, note, actorId);
+        if (order.get("user_id") != null) {
+            notificationService.orderStatusChanged(number(order.get("user_id")), orderId, target);
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("orderNumber", orderNumber);

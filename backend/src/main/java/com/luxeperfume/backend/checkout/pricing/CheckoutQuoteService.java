@@ -11,15 +11,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+/** [POL] Selects coupon and shipping implementations through their strategy contracts. */
 public class CheckoutQuoteService {
     private final List<CouponDiscountStrategy> discountStrategies;
-    private final ShippingPolicy shippingPolicy;
+    private final List<ShippingPolicy> shippingPolicies;
     private final TaxPolicy taxPolicy;
 
     public CheckoutQuoteService(List<CouponDiscountStrategy> discountStrategies,
-                                ShippingPolicy shippingPolicy, TaxPolicy taxPolicy) {
+                                List<ShippingPolicy> shippingPolicies, TaxPolicy taxPolicy) {
         this.discountStrategies = List.copyOf(discountStrategies);
-        this.shippingPolicy = shippingPolicy;
+        this.shippingPolicies = List.copyOf(shippingPolicies);
         this.taxPolicy = taxPolicy;
     }
 
@@ -41,7 +42,11 @@ public class CheckoutQuoteService {
                     .orElseThrow(() -> new IllegalStateException("No coupon strategy registered for " + effective.discountType()));
             discount = strategy.calculate(effective);
         }
-        BigDecimal shipping = shippingPolicy.calculate(countryCode, city, area).setScale(2, RoundingMode.HALF_UP);
+        ShippingPolicy shippingStrategy = shippingPolicies.stream()
+                .filter(candidate -> candidate.supports(subtotal, countryCode, city, area))
+                .findFirst().orElseThrow(() -> new IllegalStateException("No shipping strategy supports this destination"));
+        BigDecimal shipping = shippingStrategy.calculate(countryCode, city, area)
+                .setScale(2, RoundingMode.HALF_UP);
         BigDecimal taxable = subtotal.subtract(discount).max(BigDecimal.ZERO);
         BigDecimal tax = taxPolicy.calculate(taxable).setScale(2, RoundingMode.HALF_UP);
         MoneyBreakdown totals = new MoneyBreakdown(subtotal, discount, shipping, tax);

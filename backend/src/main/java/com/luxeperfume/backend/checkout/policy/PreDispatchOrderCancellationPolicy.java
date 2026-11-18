@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 
 @Component
+/** [POL] Concrete cancellation strategy restricted to pre-dispatch and reversible-payment states. */
 public final class PreDispatchOrderCancellationPolicy implements OrderCancellationPolicy {
     private static final Set<String> PRE_DISPATCH = Set.of("PENDING", "CONFIRMED", "PROCESSING");
     private static final Set<String> REVERSIBLE_PAYMENT_STATES = Set.of("UNPAID", "FAILED");

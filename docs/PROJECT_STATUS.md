@@ -56,6 +56,18 @@
 - Remaining: owner-local clean-database verification only. GitHub-side regression/security review and CI are complete.
 - Shipping/tax are server-side configurable policies; development defaults are explicitly zero. No payment gateway work (Phase 10) or Customer/Admin frontend source changes are included. V1/V2/V3 remain unchanged.
 
+## Phase 10 — Payment Integration
+- Working branch: `phase10/payment-integration`; draft PR #7 remains open and unmerged.
+- COD lifecycle, payment records, manual refund review/reconciliation, payment state policy and V4–V6 migrations are implemented and passed the previously recorded GitHub CI checkpoint.
+- bKash and Nagad sandbox adapters, authenticated callbacks, server-side verification and actual sandbox acceptance remain incomplete because official merchant specifications are still required.
+- SSLCommerz is explicitly deferred until the final payment phase. Phase 10 remains IN PROGRESS.
+
+## Phase 11 — Advanced Business Logic & OOP
+- Working branch: `phase11/advanced-business-logic-oop`; draft PR #8: https://github.com/musa390/My-project/pull/8.
+- Implementation includes immutable inventory rules, product publication policy, discount and shipping strategies, notification inbox, return request/review/receipt workflow, refund amount policy and additive V7/V8 migrations.
+- Backend CI PASS: https://github.com/musa390/My-project/actions/runs/44231050193. Database Migration CI PASS: https://github.com/musa390/My-project/actions/runs/44231049804. Verified commit `605b859f705134924b9b545c934b48d79af34965`; Java 21 + MySQL 8.4; Maven `clean verify`: 72 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS. Database CI applied V1–V8 and verified the new tables. Owner-local Windows clean-database verification remains pending; do not claim absolute 100% until that final check passes.
+- SSLCommerz is not included. bKash/Nagad provider work remains a separate Phase 10 blocker.
+
 ## Roadmap
 | Phase | Scope | Status |
 |---|---|---|
@@ -69,8 +81,8 @@
 | 7 | Product & Catalog Backend | 100% implementation + CI; owner environment checks pending |
 | 8 | Cart, Wishlist & Inventory | In progress; final review/local verification pending |
 | 9 | Checkout & Order Management | **GitHub-side complete; owner-local clean DB verification pending** |
-| 10 | Payment Integration | Pending |
-| 11 | Advanced Business Logic & OOP | Pending |
+| 10 | Payment Integration | IN PROGRESS — bKash/Nagad sandbox work pending; SSLCommerz deferred |
+| 11 | Advanced Business Logic & OOP | Implementation + GitHub CI complete; owner-local Windows verification pending |
 | 12 | Additional Integrations | Pending |
 | 13 | Frontend & Backend Integration | Pending |
 | 14 | Testing, Security & QA | Pending |

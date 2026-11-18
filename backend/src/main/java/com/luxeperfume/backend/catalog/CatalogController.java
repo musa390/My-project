@@ -1,5 +1,8 @@
 package com.luxeperfume.backend.catalog;
 
+import com.luxeperfume.backend.inventory.domain.InventoryQuantity;
+import com.luxeperfume.backend.catalog.policy.ProductPublicationPolicy;
+
 import com.luxeperfume.backend.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +24,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
+/** [CRUD] Staff catalogue endpoints enforce controlled create/read/update/archive operations. */
 public class CatalogController {
     private final JdbcTemplate jdbc;
 
@@ -261,9 +265,15 @@ public class CatalogController {
         String type=text(body,"productType",String.valueOf(current.get("product_type"))).toUpperCase(Locale.ROOT);
         String status=text(body,"status",String.valueOf(current.get("status"))).toUpperCase(Locale.ROOT);
         if(!Set.of("STANDARD","VARIABLE").contains(type)||!Set.of("DRAFT","ACTIVE","ARCHIVED").contains(status)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid product type or status");
-        if("ACTIVE".equals(status)) {
-            Integer activeVariants=jdbc.queryForObject("SELECT COUNT(*) FROM product_variants WHERE product_id=? AND is_active=TRUE",Integer.class,id);
-            if(activeVariants==null||activeVariants==0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"An active product must have at least one active variant");
+        if ("ACTIVE".equals(status)) {
+            Integer activeVariants = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM product_variants WHERE product_id=? AND is_active=TRUE",
+                    Integer.class, id);
+            try {
+                ProductPublicationPolicy.requirePublishable(activeVariants == null ? 0 : activeVariants);
+            } catch (IllegalArgumentException invalidPublication) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, invalidPublication.getMessage());
+            }
         }
         jdbc.update("UPDATE products SET category_id=?,brand_id=?,name=?,slug=?,short_description=?,description=?,product_type=?,status=?,is_featured=?,seo_title=?,seo_description=? WHERE id=?",
             categoryId,brandId,name,productSlug,text(body,"shortDescription",(String)current.get("short_description")),text(body,"description",(String)current.get("description")),type,status,bool(body,"featured",Boolean.TRUE.equals(current.get("is_featured"))),text(body,"seoTitle",(String)current.get("seo_title")),text(body,"seoDescription",(String)current.get("seo_description")),id);
@@ -347,10 +357,15 @@ public class CatalogController {
         long oldReserved=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("quantity_reserved")).longValue();
         long oldReorder=currentRows.isEmpty()?0:((Number)currentRows.getFirst().get("reorder_level")).longValue();
         long qty=number(body,"quantityOnHand",-1), reserved=number(body,"quantityReserved",oldReserved), reorder=number(body,"reorderLevel",oldReorder);
-        if(qty<0||qty>4_294_967_295L||reserved<0||reserved>qty||reorder<0||reorder>4_294_967_295L) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid inventory quantities");
-        long delta=qty-oldOnHand;
+        InventoryQuantity updated;
+        try {
+            updated = new InventoryQuantity(qty, reserved, reorder);
+        } catch (IllegalArgumentException invalidInventory) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, invalidInventory.getMessage());
+        }
+        long delta=updated.onHand()-oldOnHand;
         if(delta<Integer.MIN_VALUE||delta>Integer.MAX_VALUE) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Inventory adjustment exceeds the movement ledger range");
-        jdbc.update("INSERT INTO inventory(variant_id,quantity_on_hand,quantity_reserved,reorder_level) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE quantity_on_hand=VALUES(quantity_on_hand),quantity_reserved=VALUES(quantity_reserved),reorder_level=VALUES(reorder_level)",variantId,qty,reserved,reorder);
+        jdbc.update("INSERT INTO inventory(variant_id,quantity_on_hand,quantity_reserved,reorder_level) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE quantity_on_hand=VALUES(quantity_on_hand),quantity_reserved=VALUES(quantity_reserved),reorder_level=VALUES(reorder_level)",variantId,updated.onHand(),updated.reserved(),updated.reorderLevel());
         if(delta!=0) jdbc.update("INSERT INTO inventory_movements(variant_id,movement_type,quantity_change,reference_type,note) VALUES(?,'ADJUSTMENT',?,'MANUAL_UPDATE','Staff inventory update')",variantId,(int)delta);
         return ApiResponse.success("Inventory updated",one("SELECT * FROM inventory WHERE variant_id=?",variantId));
     }

@@ -1,5 +1,6 @@
 package com.luxeperfume.backend.payment;
 
+import com.luxeperfume.backend.payment.domain.RefundAmountPolicy;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -73,9 +74,13 @@ public class PaymentRefundService {
                 SELECT COALESCE(SUM(amount),0) FROM payment_refunds
                 WHERE payment_id=? AND refund_status IN ('REQUESTED','PENDING','SUCCEEDED','MANUAL_REVIEW')
                 """, BigDecimal.class, paymentId);
-        BigDecimal remaining = ((BigDecimal) payment.get("amount")).subtract(reserved == null ? BigDecimal.ZERO : reserved);
-        if (amount.compareTo(remaining) > 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Refund amount exceeds the remaining refundable amount");
+        BigDecimal remaining;
+        try {
+            remaining = RefundAmountPolicy.remaining(
+                    (BigDecimal) payment.get("amount"), reserved == null ? BigDecimal.ZERO : reserved);
+            RefundAmountPolicy.requireWithinRemaining(amount, remaining);
+        } catch (IllegalArgumentException invalidRefund) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, invalidRefund.getMessage());
         }
 
         String refundReference = "RFD-" + UUID.randomUUID();
