@@ -11,6 +11,16 @@ export type AdminSessionUser = {
 type SessionResponse = { success: boolean; sessionId?: string };
 type CurrentUserResponse = { success: boolean; user: AdminSessionUser };
 
+export async function getStaffCurrentUser(): Promise<AdminSessionUser> {
+  const response = await apiRequest<CurrentUserResponse>("/api/v1/auth/me");
+  const user = response.user;
+  if (!user.roles.some((role) => ["ADMIN", "MANAGER"].includes(role))) {
+    await logoutSession();
+    throw new Error("This account does not have Admin or Manager access.");
+  }
+  return user;
+}
+
 export async function signInAsStaff(email: string, password: string): Promise<AdminSessionUser> {
   await apiRequest<SessionResponse>("/api/v1/auth/login", {
     method: "POST",
@@ -18,13 +28,7 @@ export async function signInAsStaff(email: string, password: string): Promise<Ad
   });
 
   try {
-    const response = await apiRequest<CurrentUserResponse>("/api/v1/auth/me");
-    const user = response.user;
-    if (!user.roles.some((role) => ["ADMIN", "MANAGER"].includes(role))) {
-      await logoutSession();
-      throw new Error("This account does not have Admin or Manager access.");
-    }
-    return user;
+    return await getStaffCurrentUser();
   } catch (error) {
     if (error instanceof Error && error.message.includes("does not have Admin")) throw error;
     throw error;
