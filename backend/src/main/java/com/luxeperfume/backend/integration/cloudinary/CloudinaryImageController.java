@@ -49,8 +49,16 @@ public class CloudinaryImageController {
         long timestamp=Instant.now().getEpochSecond(); String folder="luxe-perfume/products";
         String signature=sign("folder="+folder+"&timestamp="+timestamp);
         ByteArrayResource resource;
-        try { byte[] bytes=file.getBytes();resource=new ByteArrayResource(bytes){@Override public String getFilename(){return "product-image";}}; }
-        catch(Exception ex){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Could not read image file");}
+        try {
+            byte[] bytes=file.getBytes();
+            if (!matchesImageSignature(bytes, type))
+                throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE,"Image content does not match its declared type");
+            resource=new ByteArrayResource(bytes){@Override public String getFilename(){return "product-image";}};
+        } catch(ResponseStatusException ex) {
+            throw ex;
+        } catch(Exception ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Could not read image file");
+        }
         MultiValueMap<String,Object> form=new LinkedMultiValueMap<>();
         form.add("file",resource);form.add("api_key",apiKey);form.add("timestamp",String.valueOf(timestamp));form.add("folder",folder);form.add("signature",signature);
         Map<?,?> uploaded;
@@ -65,5 +73,17 @@ public class CloudinaryImageController {
         Long imageId=jdbc.queryForObject("SELECT LAST_INSERT_ID()",Long.class);
         return ApiResponse.success("Product image uploaded",Map.of("id",imageId,"imageUrl",url,"isPrimary",primary));
     }
+    private static boolean matchesImageSignature(byte[] bytes,String type) {
+        if ("image/jpeg".equals(type))
+            return bytes.length>=3 && (bytes[0]&255)==0xFF && (bytes[1]&255)==0xD8 && (bytes[2]&255)==0xFF;
+        if ("image/png".equals(type))
+            return bytes.length>=8 && (bytes[0]&255)==0x89 && bytes[1]==0x50 && bytes[2]==0x4E
+                    && bytes[3]==0x47 && bytes[4]==0x0D && bytes[5]==0x0A && bytes[6]==0x1A && bytes[7]==0x0A;
+        if ("image/webp".equals(type))
+            return bytes.length>=12 && bytes[0]=='R' && bytes[1]=='I' && bytes[2]=='F' && bytes[3]=='F'
+                    && bytes[8]=='W' && bytes[9]=='E' && bytes[10]=='B' && bytes[11]=='P';
+        return false;
+    }
+
     private String sign(String value){try{Mac mac=Mac.getInstance("HmacSHA1");mac.init(new SecretKeySpec(apiSecret.getBytes(StandardCharsets.UTF_8),"HmacSHA1"));return HexFormat.of().formatHex(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));}catch(Exception ex){throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"Could not sign Cloudinary upload");}}
 }
