@@ -85,7 +85,7 @@ public class StaffBannerController {
     public record BannerRequest(
             @NotBlank @Size(max=180) String title,@Size(max=255) String subtitle,
             @NotBlank @Size(max=1000) @Pattern(regexp="https://.+") String imageUrl,
-            @Size(max=1000) String targetUrl,@NotBlank @Size(max=50) @Pattern(regexp="[A-Za-z_]+") String placement,
+            @Size(max=1000) @Pattern(regexp="^(https://[^\\s]+|/[^/].*)$") String targetUrl,@NotBlank @Size(max=50) @Pattern(regexp="[A-Za-z_]+") String placement,
             LocalDateTime startsAt,LocalDateTime endsAt,int sortOrder,boolean active
     ){}
 }
