@@ -8,7 +8,6 @@ import {ShoppingBag,Search,UserRound,Heart,Menu,X,ArrowRight,Instagram,Facebook,
 import type {Product} from "@/lib/products";
 import {money,productPrice,productStock} from "@/lib/products";
 import {getCatalog,getProduct,getCart,getWishlist,addCartItem,updateCartItem,removeCartItem,addWishlistItem,removeWishlistItem} from "@/lib/commerce";
-import {getCurrentUser} from "@/lib/auth";
 import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact, contactFormMode} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
@@ -39,6 +38,13 @@ const isDemoOrder = (value: unknown): value is DemoOrder => {
  const customerFields = ["name", "email", "phone", "alternativePhone", "division", "district", "area", "address", "postalCode", "instructions"];
  return typeof order.id === "string" && customerFields.every((field) => typeof customerRecord[field] === "string") && Array.isArray(order.items) && order.items.every(isDemoOrderItem) && typeof order.subtotal === "number" && typeof order.discount === "number" && (order.discountCode === null || typeof order.discountCode === "string") && typeof order.delivery === "number" && typeof order.total === "number" && ["bkash", "nagad", "cod"].includes(String(order.payment)) && typeof order.createdAt === "string" && typeof order.status === "string" && Number.isInteger(order.statusStep) && Number(order.statusStep) >= 0 && Number(order.statusStep) <= 5;
 };
+const isStringList = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string") && new Set(value).size === value.length;
+function useSaved<T>(key:string,initial:T,validate:(value:unknown)=>value is T){
+ const [value,setValue]=useState<T>(initial);const [loaded,setLoaded]=useState(false);
+ useEffect(()=>{try{const raw=localStorage.getItem(key);if(raw!==null){const parsed:unknown=JSON.parse(raw);if(validate(parsed))setValue(parsed);}}catch{/* Keep safe in-memory defaults. */}finally{setLoaded(true);}},[key,validate]);
+ useEffect(()=>{if(!loaded)return;try{localStorage.setItem(key,JSON.stringify(value));}catch{/* Browser storage is optional. */}},[key,value,loaded]);
+ return [value,setValue,loaded] as const;
+}
 type StoreContextValue = {
  products: Product[];
  catalogLoading: boolean;
@@ -94,7 +100,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
    try{
     const detail=await getProduct(product.slug);
     const variants=detail.variants||[];
-    const target=variants.find(v=>String(v.variant_name||v.variantName||"").toLowerCase().replace(/\\s/g,"")===size.toLowerCase().replace(/\\s/g,""))
+    const target=variants.find(v=>String(v.variant_name||"").toLowerCase().replace(/\\s/g,"")===size.toLowerCase().replace(/\\s/g,""))
       ||variants.find(v=>Number(v.volume_ml)===Number(size.replace(/[^0-9]/g,"")));
     if(!target)throw new Error("The selected bottle size is not available for this product.");
     const updated=await addCartItem(Number(target.id),qty);
