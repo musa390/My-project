@@ -34,7 +34,6 @@ app:
       issuer: ${JWT_ISSUER:luxe-perfume-api}
       access-minutes: ${JWT_ACCESS_MINUTES:10}
       refresh-days: ${JWT_REFRESH_DAYS:14}
-  security:
     password-reset:
       frontend-url: ${PASSWORD_RESET_FRONTEND_URL}
 springdoc:
