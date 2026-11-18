@@ -36,8 +36,8 @@ Phase 13 is complete only when customer and admin flows use real backend/databas
 
 ## Status
 - [x] Repository audit and Phase 13 branch creation.
-- [ ] API client and CSRF/session foundation.
-- [ ] Customer authentication.
+- [x] API client and CSRF/session foundation (customer + admin clients, credentialed fetch, CSRF bootstrap, error normalization).
+- [x] Customer authentication foundation (register/login/current-user API and connected sign-in/register form).
 - [ ] Customer catalog.
 - [ ] Cart and wishlist.
 - [ ] Checkout, orders and payment UI.
