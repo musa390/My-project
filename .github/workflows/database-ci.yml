@@ -101,3 +101,4 @@ jobs:
           for table in payment_refunds payment_events user_notifications return_requests return_request_events contact_messages; do
             grep -qx "$table" phase11-business-tables.txt
           done
+          grep -q "^confirmation_token_hash" phase11-business-tables.txt
