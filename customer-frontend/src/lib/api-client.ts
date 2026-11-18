@@ -20,6 +20,7 @@ export class ApiError extends Error {
 
 let csrfToken: string | null = null;
 let csrfRequest: Promise<string> | null = null;
+let refreshPromise: Promise<void> | null = null;
 
 async function readResponse(response: Response): Promise<unknown> {
   const text = await response.text();
@@ -69,9 +70,10 @@ export type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
-export async function apiRequest<T>(
+async function apiRequestInternal<T>(
   path: string,
-  options: ApiRequestOptions = {},
+  options: ApiRequestOptions,
+  allowRefresh: boolean,
 ): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
   const isUnsafeMethod = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method);
@@ -101,6 +103,14 @@ export async function apiRequest<T>(
 
   const payload = await readResponse(response);
   if (!response.ok) {
+    if (response.status === 401 && allowRefresh && !isUnsafeMethod && !/\\/auth\\/(login|register|refresh|logout)(?:$|\\?)/.test(path)) {
+      try {
+        if (!refreshPromise) refreshPromise = refreshSession();
+        await refreshPromise;
+        return await apiRequestInternal<T>(path, options, false);
+      } catch { /* Preserve the original unauthorized response if refresh is unavailable. */ }
+      finally { refreshPromise = null; }
+    }
     if (response.status === 403 && isUnsafeMethod) csrfToken = null;
     const errorPayload = payload as ApiErrorPayload | null;
     const message = errorPayload?.message || errorPayload?.detail || errorPayload?.error
@@ -109,6 +119,10 @@ export async function apiRequest<T>(
   }
 
   return payload as T;
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  return apiRequestInternal<T>(path, options, true);
 }
 
 export async function refreshSession(): Promise<void> {
