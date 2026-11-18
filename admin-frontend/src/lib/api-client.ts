@@ -16,6 +16,7 @@ export class ApiError extends Error {
 
 let csrfToken: string | null = null;
 let csrfRequest: Promise<string> | null = null;
+let refreshPromise: Promise<void> | null = null;
 
 async function readResponse(response: Response): Promise<unknown> {
   const text = await response.text();
@@ -46,7 +47,7 @@ export async function getCsrfToken(forceRefresh = false): Promise<string> {
 
 export type ApiRequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+async function apiRequestInternal<T>(path: string, options: ApiRequestOptions, allowRefresh: boolean): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
   const unsafe = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method);
   const headers = new Headers(options.headers);
@@ -68,6 +69,14 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
   const payload = await readResponse(response);
 
   if (!response.ok) {
+    if (response.status === 401 && allowRefresh && !unsafe && !/\\/auth\\/(login|register|refresh|logout)(?:$|\\?)/.test(path)) {
+      try {
+        if (!refreshPromise) refreshPromise = refreshSession();
+        await refreshPromise;
+        return await apiRequestInternal<T>(path, options, false);
+      } catch { /* Preserve the original unauthorized response if refresh is unavailable. */ }
+      finally { refreshPromise = null; }
+    }
     if (response.status === 403 && unsafe) csrfToken = null;
     const error = payload as ApiErrorPayload | null;
     const message = error?.message || error?.detail || error?.error
@@ -75,6 +84,10 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     throw new ApiError(message, response.status, payload);
   }
   return payload as T;
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  return apiRequestInternal<T>(path, options, true);
 }
 
 export async function refreshSession(): Promise<void> {
