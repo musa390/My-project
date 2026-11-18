@@ -90,8 +90,8 @@ jobs:
         with:
           name: phase14-customer-dependency-audit
           path: |
-            package-lock.json
-            phase14-npm-audit.json
+            customer-frontend/package-lock.json
+            customer-frontend/phase14-npm-audit.json
           retention-days: 14
       - run: npm run build
       - name: Run customer Chromium route and responsive QA
@@ -135,8 +135,8 @@ jobs:
         with:
           name: phase14-admin-dependency-audit
           path: |
-            package-lock.json
-            phase14-npm-audit.json
+            admin-frontend/package-lock.json
+            admin-frontend/phase14-npm-audit.json
           retention-days: 14
       - run: npm run build
       - name: Run admin Chromium route and responsive QA
