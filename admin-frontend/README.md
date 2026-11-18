@@ -1,35 +1,63 @@
 # LUXE PERFUME — Admin Frontend
 
-**Phase 3 status:** Interface implementation in progress; local runtime and browser QA must be confirmed by the project owner.
+Next.js 15 / React 19 / TypeScript admin workspace connected to the authenticated LUXE Spring Boot API.
 
-## Stack
-- Next.js 15.5.29 App Router
-- React 19.1 + TypeScript 5
-- Tailwind CSS 4
-- lucide-react
+## Live integrations
+
+- Admin/Manager login, current-session verification, role checks, logout and HttpOnly cookie session.
+- Products: create, edit, publish, archive and manage image URLs.
+- Categories, brands and collections: create, edit and deactivate.
+- Orders: search and update allowed order statuses.
+- Customers: directory, detail-ready records and Admin-only account suspension/reactivation.
+- Payments: search and confirm supported Cash on Delivery collections.
+- Inventory: low-stock list and audited quantity adjustments.
+- Returns: review queue and approve/reject decisions.
+- Contact inbox: search and status updates.
+- Coupons and banners: CRUD/deactivation.
+- Reviews: moderation.
+- Newsletter: subscriber list and staff unsubscribe.
+- Analytics: live database aggregates.
+- Staff & Roles: Admin-only role assignment for existing staff accounts.
+
+Settings does not yet have a persistent backend settings API and is intentionally shown as pending. Staff account creation is not exposed here; role assignment applies to existing staff accounts only.
 
 ## Run locally
+
+Create `.env.local`:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+```
+
+Then run:
+
 ```bash
 npm install
-npm run verify:phase3
 npm run typecheck
 npm run lint
 npm run build
 npm run dev
-``
-Open `http://localhost:3001` (the customer storefront uses port 3000).
+```
 
-## Admin modules
-Dashboard, Login placeholder, Products, Categories, Brands, Collections, Orders, Customers, Inventory, Payments, Coupons & Discounts, Reviews, Banners, Newsletter, Analytics, Staff & Roles and Settings.
+Open `http://localhost:3001`. The customer storefront uses port 3000.
 
-## Demo-only behaviour
-Management pages include searchable/filterable demo tables and temporary create/edit/delete/status interactions. Changes live only in client-side page state and are lost on refresh. Dashboard metrics and records are illustrative. Payments do not process money; newsletter does not send email; staff roles are not enforced; login does not authenticate. Do not enter real credentials or customer data.
+The backend CORS allowlist must include `http://localhost:3001`. A valid staff account with the required backend role/permissions is required.
 
-## Architecture boundaries
-- This is a separate app; do not place Admin pages in `customer-frontend/`.
-- Authentication now uses the backend API and requires an `ADMIN` or `MANAGER` role. Other management data remains demo-only until its API module is integrated.
-- All data must remain labelled demo until backend and database integration.
-- Customer Website source is protected and must not be changed during Phase 3 without explicit approval.
+## Security
 
-## QA
-Run `npm run verify:phase3`, `npm run typecheck`, `npm run lint` and `npm run build`. Then manually check all routes and interactions at mobile, tablet and desktop widths. Phase 3 must not be marked 100% until those checks pass.
+- The admin app verifies the backend session on protected routes.
+- Only Admin/Manager roles can enter the workspace; Staff & Roles is Admin-only.
+- Backend method security remains authoritative. Hiding a control in the UI is not a substitute for backend authorization.
+- JWTs remain HttpOnly cookies. CSRF headers are attached to unsafe methods.
+- Do not put passwords, API keys, provider secrets or customer credentials in frontend environment variables or source control.
+
+## Verification
+
+```bash
+npm install
+npm run typecheck
+npm run lint
+npm run build
+```
+
+After CI passes, complete local browser QA for login/role denial, products and images, taxonomy CRUD, inventory adjustments, order status, COD collection, customer status, return decisions, contact messages, coupons, banners, reviews, newsletter and analytics.
