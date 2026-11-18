@@ -42,7 +42,7 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 function mapCart(items: Awaited<ReturnType<typeof getCart>>["items"]): CartLine[] {
  return items.map(item => ({
   id:String(item.product_id),qty:Number(item.quantity),
-  size:String(item.variant_name||"100ml"),cartItemId:Number(item.item_id),variantId:Number(item.variant_id)
+  size:(String(item.variant_name||"").match(/(30|50|100)\\s*ml/i)?.[1]||"100")+"ml",cartItemId:Number(item.item_id),variantId:Number(item.variant_id)
  }));
 }
 export function StoreProvider({ children }: { children: ReactNode }) {
