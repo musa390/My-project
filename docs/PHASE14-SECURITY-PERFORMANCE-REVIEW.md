@@ -1,6 +1,28 @@
 # Phase 14 — Security, Dependency & Performance Review
 
-Review scope: source inspection and automated gates on `phase14/testing-security-quality-assurance`. This is a review record, not a penetration-test certificate.
+Review scope: source inspection and automated gates on `phase14/testing-security-quality-assurance`. This is not an external penetration-test certificate.
+
+## Automated evidence (2026-11-18)
+
+The Phase 14 quality-gate run on commit `0d54b18cebf1d65a1c6fcb5c7153a54cefed0d5a` completed these jobs successfully:
+
+- Backend: Maven `clean verify`; 80 tests, 0 failures, 0 errors, 0 skipped; MySQL 8.4 service and Flyway migrations.
+- Backend latency smoke: 50 health-endpoint requests; p50 5.0 ms, p95 20.7 ms, max 86.1 ms. This is a CI health-endpoint smoke only, not a production load test.
+- Customer frontend: static verifier, TypeScript, ESLint, production dependency audit, production build, Chromium route/responsive smoke. 10 routes and 3 viewport sizes passed.
+- Admin frontend: static verifier, TypeScript, ESLint, production dependency audit, production build, Chromium route/responsive smoke. 18 routes and 3 viewport sizes passed.
+- CodeQL Java/Kotlin and JavaScript/TypeScript analyses passed.
+- Maven dependency inventory passed.
+- OSV scan completed and uploaded its report. That run scanned the pre-refresh customer lockfile and reported 7 npm vulnerability records across 4 packages (4 High, 3 Medium), including PostCSS 8.4.31 and picomatch 2.3.2/4.0.7. This scan predates the lockfile refresh below and must not be treated as the final dependency snapshot.
+
+## Dependency remediation and remaining advisory
+
+- Added a PostCSS override to both frontend manifests and ran non-forced `npm audit fix`.
+- The generated customer and admin package-lock files were committed to the Phase 14 branch by the CI lockfile-sync job.
+- The committed lockfiles now resolve PostCSS 8.5.23.
+- Blocking `npm audit --omit=dev --audit-level=high` passed in both frontend jobs: no high/critical production dependency advisory was reported.
+- The full development-tooling audit still records high-severity findings rooted in picomatch (GHSA-fc5q-39xc-vjpf / CVE-2026-112366). The advisory affects picomatch through 4.0.7 and currently lists no patched version. It is present only in development/lint tooling in these lockfiles, not in the production dependency tree. Do not use a forced downgrade of `eslint-config-next` merely to silence the audit; that would mismatch the Next.js 15 application. Keep this as an explicit accepted dev-tooling risk until upstream publishes a fixed version, then update and rerun audits.
+
+The next quality-gate run on the post-refresh branch commit must confirm the OSV scan against the committed lockfiles. The earlier OSV result is retained as historical evidence only.
 
 ## Security controls inspected
 
@@ -9,7 +31,7 @@ Review scope: source inspection and automated gates on `phase14/testing-security
 - Registration enforces a 12–72 UTF-8 byte password range.
 - Access tokens are signed JWTs with issuer, audience, purpose, subject, session ID, issue time, and expiry.
 - JWT authentication checks the server-side session is active, unexpired, not revoked, and belongs to an active, non-deleted account.
-- Refresh/logout/session behavior has integration-test coverage in `BackendFoundationIntegrationTest`.
+- Refresh/logout/session behavior has integration-test coverage.
 - JWT parsing failures clear the security context and do not expose parser exceptions to the caller.
 
 ### Authorization
@@ -24,50 +46,35 @@ Review scope: source inspection and automated gates on `phase14/testing-security
 - CSRF protection is enabled with a cookie token repository.
 - HTTP Basic and form login are disabled.
 - CORS uses an explicit configured origin list and credentials; wildcard origins are not used in the inspected implementation.
-- Authentication cookies are created by the authentication service; cookie flags require runtime/profile verification as well as source review.
+- Authentication cookie flags still require deployment-profile verification.
 
 ### Payment/refund behavior
-- The inspected refund service implements a manual-review and reconciliation workflow.
+- Refund processing uses a manual-review and reconciliation workflow.
 - It does not claim a provider refund occurred until staff record a reconciliation reference.
-- Existing tests cover refund amount rules and payment/refund integration paths.
-- Live bKash/Nagad or other payment-provider sandbox verification is not evidenced by this source review and remains outside this automated gate.
+- Integration tests cover COD/payment/refund paths.
+- No live bKash/Nagad or other provider sandbox transaction is claimed.
 
-## Security configuration risks / required deployment controls
+## Required deployment controls
 
-1. The application has a development JWT secret fallback. The JWT service rejects that exact fallback when the active profile contains `prod`; deployment must activate the production profile and inject a unique secret from a secret manager. Do not rely on the fallback in any deployed environment.
-2. The test and local environments use database credentials from environment variables. Never commit `.env`, expose `MYSQL_PASSWORD`, or place credentials in test reports.
-3. OAuth, email, and media-provider integrations are optional/configuration-dependent. Their real provider security and redirect allowlists need owner-controlled sandbox checks before production use.
-4. This review did not perform an external penetration test, authenticated browser session test against a deployed environment, or live payment sandbox transaction.
+1. The application has a development JWT secret fallback. The JWT service rejects that exact fallback when the active profile contains `prod`; deployment must activate the production profile and inject a unique secret from a secret manager.
+2. Never commit `.env`, expose `MYSQL_PASSWORD`, or place credentials in test reports.
+3. OAuth, email, and media-provider integrations require owner-controlled sandbox checks and verified redirect allowlists.
+4. This review did not perform an external penetration test or a live provider transaction.
 
-## Dependency audit evidence
+## Performance boundary
 
-- Frontend jobs run `npm audit --audit-level=high` for customer and admin dependency trees.
-- Backend CI resolves and inventories Maven dependencies. A Maven CVE database scan is not claimed by dependency inventory alone; review advisories and update candidates before release.
-- Any reported high/critical advisory must be assessed for affected version, runtime reachability, exploitability, and safe upgrade path. Do not suppress audit failures without a written disposition.
-
-## Performance review
-
-- Chromium smoke checks exercise customer/admin route rendering at 390×844, 768×1024, and 1440×900 and fail on horizontal overflow or HTTP 404/5xx.
-- Backend integration tests exercise database-backed catalog, cart, checkout, order, inventory, payment, refund, return, and staff flows.
-- These checks are correctness/route smoke tests, not a production load test. No production throughput, p95 latency, or concurrency SLA is claimed.
-- Before production traffic, run a separately approved load test against a staging environment with representative data and monitor database query plans, connection-pool saturation, and p95/p99 latency.
-
-## Findings disposition
-
-| Finding | Severity | Required disposition |
-|---|---|---|
-| Development JWT fallback exists | High deployment risk if production profile/secret are misconfigured | Enforce production profile and secret-manager injection at deployment |
-| Local Windows Maven run previously failed with MySQL 1045 | Environment/configuration blocker | Use the supplied local verification helper; CI uses isolated MySQL service |
-| Backend dependency CVE scan not yet automated | Medium process gap | Review Maven advisories before release; do not label dependency inventory as CVE scan |
-| No staging load-test evidence | Medium process gap | Run approved staging load test before production launch |
-| Live payment provider sandbox not verified | External dependency | Owner-provided sandbox access required; COD/manual refund tests do not prove gateway integration |
+- Chromium smoke covers customer/admin routes at 390×844, 768×1024, and 1440×900 and fails on HTTP 404/5xx, uncaught page exceptions, or horizontal overflow.
+- Backend tests exercise database-backed catalog, cart, checkout, order, inventory, payment, refund, return, and staff flows.
+- The 50-request health endpoint latency smoke is not representative load testing. No production throughput or p95/p99 SLA is claimed.
+- Before production traffic, run a separately approved staging load test with representative data and monitor query plans, connection-pool saturation, and p95/p99 latency.
 
 ## Acceptance boundary
 
-Do not declare Phase 14 fully accepted unless:
-- all CI quality-gate jobs pass on the final PR head;
-- backend tests and Flyway migration verification pass;
-- customer/admin TypeScript, lint, production build, and Chromium route/responsive smoke pass;
-- npm audits and CodeQL results are reviewed;
-- no unresolved critical/high exploitable finding remains;
-- owner-local verification and any provider-specific staging checks are either passed or explicitly recorded as release blockers/waivers.
+Do not declare Phase 14 fully accepted until:
+- the OSV scan passes review on the post-refresh committed lockfiles;
+- all latest CI quality-gate jobs pass;
+- no unresolved critical production vulnerability or critical business-flow defect remains;
+- authenticated customer/admin browser journeys are exercised in a staging environment with test accounts;
+- any provider-specific sandbox checks are passed or explicitly waived by the owner;
+- the dev-only picomatch advisory is explicitly accepted by the owner or removed after an upstream fix;
+- owner acceptance is recorded.
