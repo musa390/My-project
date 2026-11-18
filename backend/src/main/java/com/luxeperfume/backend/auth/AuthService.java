@@ -10,7 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.client.RestClient;
+import org.springframework.context.ApplicationEventPublisher;
+import com.luxeperfume.backend.integration.email.PasswordResetEmailEvent;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 import java.nio.charset.StandardCharsets;
@@ -38,23 +39,20 @@ public class AuthService {
     private final long refreshDays;
     private final boolean secureCookies;
     private final String resetUrl;
-    private final String resendKey;
-    private final String emailFrom;
+    private final ApplicationEventPublisher events;
 
     public AuthService(JdbcTemplate jdbc, PasswordEncoder passwordEncoder, JwtService jwt,
             @Value("${app.security.jwt.refresh-days}") long refreshDays,
             @Value("${app.security.cookies.secure}") boolean secureCookies,
             @Value("${app.security.password-reset.frontend-url}") String resetUrl,
-            @Value("${app.security.email.resend-api-key}") String resendKey,
-            @Value("${app.security.email.from}") String emailFrom) {
+            ApplicationEventPublisher events) {
         this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
         this.jwt = jwt;
         this.refreshDays = refreshDays;
         this.secureCookies = secureCookies;
         this.resetUrl = resetUrl;
-        this.resendKey = resendKey;
-        this.emailFrom = emailFrom;
+        this.events = events;
     }
 
     @Transactional
@@ -172,21 +170,8 @@ public class AuthService {
         jdbc.update("UPDATE password_reset_tokens SET used_at=UTC_TIMESTAMP() WHERE user_id=? AND used_at IS NULL", userId);
         jdbc.update("INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES(?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 30 MINUTE))",
                 userId, sha256(token));
-        if (resendKey != null && !resendKey.isBlank()) {
-            String link = resetUrl + (resetUrl.contains("?") ? "&" : "?") + "token=" + token;
-            try {
-                RestClient.create("https://api.resend.com")
-                        .post().uri("/emails")
-                        .header("Authorization", "Bearer " + resendKey)
-                        .body(Map.of("from", emailFrom, "to", List.of(email.trim()),
-                                "subject", "Reset your LUXE PERFUME password",
-                                "text", "Use this one-time link within 30 minutes: " + link))
-                        .retrieve().toBodilessEntity();
-            } catch (RuntimeException deliveryFailure) {
-                // Keep the public response identical and never log the one-time reset token.
-                log.error("Password reset email delivery failed; reset token was not logged.");
-            }
-        }
+        String link = resetUrl + (resetUrl.contains("?") ? "&" : "?") + "token=" + token;
+        events.publishEvent(new PasswordResetEmailEvent(email.trim(), link));
     }
 
     @Transactional

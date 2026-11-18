@@ -71,7 +71,7 @@ jobs:
           grep -qx "auth_sessions" phase6-auth-tables.txt
           grep -qx "password_reset_tokens" phase6-auth-tables.txt
 
-      - name: Apply V4-V8 business logic migrations
+      - name: Apply V4-V9 business logic and integration migrations
         shell: bash
         run: |
           set -euo pipefail
@@ -80,11 +80,12 @@ jobs:
             V5__payment_refund_permission.sql \
             V6__payment_refund_reconciliation_reference.sql \
             V7__user_notifications.sql \
-            V8__return_requests_and_audit.sql; do
+            V8__return_requests_and_audit.sql \
+            V9__external_integrations_contact_and_newsletter.sql; do
             docker run --rm -i --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "backend/src/main/resources/db/migration/$migration"
           done
 
-      - name: Verify Phase 10 and Phase 11 business tables
+      - name: Verify Phase 10, Phase 11 and Phase 12 tables
         shell: bash
         run: |
           set -euo pipefail
@@ -94,7 +95,10 @@ jobs:
             "SHOW TABLES LIKE 'user_notifications';" \
             "SHOW TABLES LIKE 'return_requests';" \
             "SHOW TABLES LIKE 'return_request_events';" \
+            "SHOW TABLES LIKE 'contact_messages';" \
+            "SHOW COLUMNS FROM newsletter_subscribers LIKE 'confirmation_token_hash';" \
             | docker run --rm -i --network host --entrypoint mysql mysql:8.4 --batch --skip-column-names --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | tee phase11-business-tables.txt
-          for table in payment_refunds payment_events user_notifications return_requests return_request_events; do
+          for table in payment_refunds payment_events user_notifications return_requests return_request_events contact_messages; do
             grep -qx "$table" phase11-business-tables.txt
           done
+          grep -q "^confirmation_token_hash" phase11-business-tables.txt

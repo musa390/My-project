@@ -1,6 +1,10 @@
 spring:
   application:
     name: luxe-perfume-backend
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:luxe_perfume}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: ${MYSQL_USER:luxe_app}
@@ -36,6 +40,9 @@ management:
       probes:
         enabled: true
 app:
+  storefront-url: ${STOREFRONT_URL:http://localhost:3000}
+  contact:
+    admin-email: ${CONTACT_ADMIN_EMAIL:}
   checkout:
     # Explicit development defaults; set these server-side for the real delivery/tax policy.
     shipping:
