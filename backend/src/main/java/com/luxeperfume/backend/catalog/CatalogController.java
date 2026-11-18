@@ -548,11 +548,12 @@ public class CatalogController {
     public ApiResponse<Map<String,Object>> cloudinarySignature() {
         if(cloudName.isBlank()||cloudApiKey.isBlank()||cloudApiSecret.isBlank()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Cloudinary is not configured");
         long timestamp=Instant.now().getEpochSecond();
+        String folder="luxe-perfume/products";
         try {
             Mac mac=Mac.getInstance("HmacSHA1");
             mac.init(new SecretKeySpec(cloudApiSecret.getBytes(StandardCharsets.UTF_8),"HmacSHA1"));
-            String signature=HexFormat.of().formatHex(mac.doFinal(("timestamp="+timestamp).getBytes(StandardCharsets.UTF_8)));
-            return ApiResponse.success("Cloudinary upload signature",Map.of("cloudName",cloudName,"apiKey",cloudApiKey,"timestamp",timestamp,"signature",signature,"uploadUrl","https://api.cloudinary.com/v1_1/"+cloudName+"/image/upload"));
+            String signature=HexFormat.of().formatHex(mac.doFinal(("folder="+folder+"&timestamp="+timestamp).getBytes(StandardCharsets.UTF_8)));
+            return ApiResponse.success("Cloudinary upload signature",Map.of("cloudName",cloudName,"apiKey",cloudApiKey,"timestamp",timestamp,"folder",folder,"signature",signature,"uploadUrl","https://api.cloudinary.com/v1_1/"+cloudName+"/image/upload"));
         } catch(Exception ex) { throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"Could not sign Cloudinary upload"); }
     }
 }
