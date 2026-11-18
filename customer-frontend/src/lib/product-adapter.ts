@@ -1,5 +1,4 @@
 import type { Product, ProductReview } from "@/lib/products";
-import { products as visualFallbacks } from "@/lib/products";
 import type { CatalogProduct, ProductDetail } from "@/lib/commerce";
 
 type VariantLike = { id?: number; variantName?: string; variant_name?: string; volume_ml?: number; price?: number|string; availableQuantity?: number; available_quantity?: number };
@@ -20,7 +19,6 @@ export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0
   const detail=record as ProductDetail;
   const variants=variantsFrom((record as CatalogProduct & {variants?:unknown}).variants);
   const primaryImage=detail.images?.find(image=>image.is_primary)?.image_url || detail.images?.[0]?.image_url || record.image_url || "";
-  const fallback=visualFallbacks[index % visualFallbacks.length];
   const stockBySize:Product["stockBySize"]={"30ml":0,"50ml":0,"100ml":0};
   const priceBySize:NonNullable<Product["priceBySize"]>={};
   for(const variant of variants){
@@ -36,7 +34,7 @@ export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0
   const reviews:ProductReview[]=rawReviews.map(review=>({name:[review.first_name,review.last_name].filter(Boolean).join(" ")||"Customer",rating:Number(review.rating||0),title:String(review.title||""),comment:String(review.body||""),date:String(review.created_at||"").slice(0,10)}));
   const minPrice=Number(record.price_min??(prices.length?Math.min(...prices):0));
 
-  const image=primaryImage||fallback.image;
+  const image=primaryImage||"/images/product-placeholder.svg";
   const images=detail.images?.map(item=>item.image_url).filter(Boolean) || (primaryImage?[primaryImage]:[]);
   return {
     id:String(record.id),slug:record.slug,name:record.name,brand:record.brand_name||String((detail as Record<string,unknown>).brand_name||"LUXE PERFUME"),
@@ -47,6 +45,6 @@ export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0
     topNotes:[],heartNotes:[],baseNotes:[],fragranceFamily:record.category_name||"Fragrance",
     longevity:"Not specified",sillage:"Not specified",
     stock:Number((record as CatalogProduct & {available_stock?:number}).available_stock??(record.available?1:0)),
-    stockBySize,priceBySize,reviews
+    stockBySize,priceBySize:Object.keys(priceBySize).length?priceBySize:undefined,reviews
   };
 }
