@@ -22,7 +22,7 @@ The Phase 14 quality-gate run on commit `0d54b18cebf1d65a1c6fcb5c7153a54cefed0d5
 - Blocking `npm audit --omit=dev --audit-level=high` passed in both frontend jobs: no high/critical production dependency advisory was reported.
 - The full development-tooling audit still records high-severity findings rooted in picomatch (GHSA-fc5q-39xc-vjpf / CVE-2026-112366). The advisory affects picomatch through 4.0.7 and currently lists no patched version. It is present only in development/lint tooling in these lockfiles, not in the production dependency tree. Do not use a forced downgrade of `eslint-config-next` merely to silence the audit; that would mismatch the Next.js 15 application. Keep this as an explicit accepted dev-tooling risk until upstream publishes a fixed version, then update and rerun audits.
 
-The next quality-gate run on the post-refresh branch commit must confirm the OSV scan against the committed lockfiles. The earlier OSV result is retained as historical evidence only.
+The post-refresh OSV scan on commit `a9747a5c12dc17578efb179df02fababf2c9df5c` confirmed that the remaining OSV findings are four High records for picomatch 2.3.2 and 4.0.7 across the two frontend lockfiles. No fixed version is listed. The earlier PostCSS and Medium findings are absent from the refreshed lockfiles. The remaining records are development-only; the production-only npm audits pass.
 
 ## Security controls inspected
 
