@@ -156,7 +156,7 @@ jobs:
       matrix:
         include:
           - language: java-kotlin
-            build_mode: ${{ matrix.build_mode }}
+            build_mode: autobuild
           - language: javascript-typescript
             build_mode: none
     steps:
@@ -165,7 +165,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build_mode: autobuild
+          build-mode: ${{ matrix.build_mode }}
       - name: Analyze source
         uses: github/codeql-action/analyze@v3
         with:
