@@ -1,6 +1,8 @@
 package com.luxeperfume.backend.notification;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.ApplicationEventPublisher;
+import com.luxeperfume.backend.integration.email.OrderEmailEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +19,11 @@ public class JdbcNotificationService implements NotificationService {
             Set.of("PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED");
 
     private final JdbcTemplate jdbc;
+    private final ApplicationEventPublisher events;
 
-    public JdbcNotificationService(JdbcTemplate jdbc) {
+    public JdbcNotificationService(JdbcTemplate jdbc, ApplicationEventPublisher events) {
         this.jdbc = jdbc;
+        this.events = events;
     }
 
     @Override
@@ -27,6 +31,22 @@ public class JdbcNotificationService implements NotificationService {
     public void orderPlaced(long userId, long orderId) {
         publish(userId, "order-placed:" + orderId, orderId,
                 "notification.order.placed.title", "notification.order.placed.body");
+        Map<String, Object> order = jdbc.queryForMap(
+                "SELECT order_number,customer_email,currency,grand_total FROM customer_orders WHERE id=?", orderId);
+        events.publishEvent(new OrderEmailEvent(orderId, (String) order.get("order_number"),
+                (String) order.get("customer_email"), (String) order.get("currency"),
+                (java.math.BigDecimal) order.get("grand_total")));
+        List<Long> administrators = jdbc.query("""
+                SELECT ur.user_id FROM user_roles ur JOIN roles r ON r.id=ur.role_id
+                WHERE r.code IN ('ADMIN','MANAGER')
+                """, (rs, row) -> rs.getLong(1));
+        for (Long administratorId : administrators) {
+            jdbc.update("""
+                    INSERT IGNORE INTO user_notifications
+                        (user_id,event_key,notification_type,aggregate_type,aggregate_id,title_key,message_key)
+                    VALUES(?,?,'ORDER','ORDER',?,'notification.admin.order.new.title','notification.admin.order.new.body')
+                    """, administratorId, "admin-order-placed:" + orderId, orderId);
+        }
     }
 
     @Override
