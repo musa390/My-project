@@ -72,6 +72,8 @@ public class CatalogController {
                    b.id brand_id,b.name brand_name,b.slug brand_slug,
                    (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE) price_min,
                    (SELECT MAX(v.price) FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE) price_max,
+                   (SELECT ROUND(AVG(r.rating),1) FROM reviews r WHERE r.product_id=p.id AND r.moderation_status='APPROVED') rating_avg,
+                   (SELECT COUNT(*) FROM reviews r WHERE r.product_id=p.id AND r.moderation_status='APPROVED') review_count,
                    COALESCE((SELECT SUM(i.quantity_on_hand-i.quantity_reserved)
                      FROM product_variants v JOIN inventory i ON i.variant_id=v.id
                      WHERE v.product_id=p.id AND v.is_active=TRUE),0) available_stock
@@ -82,6 +84,12 @@ public class CatalogController {
         product.put("images", jdbc.queryForList("""
             SELECT id,image_url,alt_text,sort_order,is_primary FROM product_images
             WHERE product_id=? ORDER BY is_primary DESC,sort_order,id
+            """, id));
+        product.put("reviews", jdbc.queryForList("""
+            SELECT r.rating,r.title,r.body,r.created_at,u.first_name,u.last_name
+            FROM reviews r JOIN users u ON u.id=r.user_id
+            WHERE r.product_id=? AND r.moderation_status='APPROVED'
+            ORDER BY r.created_at DESC,r.id DESC LIMIT 20
             """, id));
         product.put("variants", jdbc.queryForList("""
             SELECT v.id,v.sku,v.variant_name,v.option_values,v.volume_ml,v.price,v.compare_at_price,
@@ -143,6 +151,17 @@ public class CatalogController {
         List<Map<String,Object>> items = jdbc.queryForList("""
             SELECT p.id,p.name,p.slug,p.short_description,p.product_type,p.is_featured,p.created_at,
                    c.name category_name,c.slug category_slug,b.name brand_name,
+                   (SELECT ROUND(AVG(r.rating),1) FROM reviews r WHERE r.product_id=p.id AND r.moderation_status='APPROVED') rating_avg,
+                   (SELECT COUNT(*) FROM reviews r WHERE r.product_id=p.id AND r.moderation_status='APPROVED') review_count,
+                   (SELECT pi.image_url FROM product_images pi WHERE pi.product_id=p.id ORDER BY pi.is_primary DESC,pi.sort_order,pi.id LIMIT 1) image_url,
+                   (SELECT COALESCE(SUM(GREATEST(i.quantity_on_hand-i.quantity_reserved,0)),0)
+                    FROM product_variants v LEFT JOIN inventory i ON i.variant_id=v.id
+                    WHERE v.product_id=p.id AND v.is_active=TRUE) available_stock,
+                   (SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id',v.id,'variantName',v.variant_name,'sku',v.sku,
+                        'price',v.price,'availableQuantity',GREATEST(COALESCE(i.quantity_on_hand,0)-COALESCE(i.quantity_reserved,0),0))),
+                        JSON_ARRAY())
+                    FROM product_variants v LEFT JOIN inventory i ON i.variant_id=v.id
+                    WHERE v.product_id=p.id AND v.is_active=TRUE) variants,
                    (SELECT MIN(v.price) FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE) price_min,
                    (SELECT MAX(v.price) FROM product_variants v WHERE v.product_id=p.id AND v.is_active=TRUE) price_max,
                    EXISTS(SELECT 1 FROM product_variants v JOIN inventory i ON i.variant_id=v.id

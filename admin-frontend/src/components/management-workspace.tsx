@@ -1,55 +1,230 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, Plus, Pencil, Trash2, X, Check, Filter } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Search, Plus, Pencil, Trash2, X, Check, RefreshCw } from "lucide-react";
+import { adminApi, type AnalyticsOverview } from "@/lib/management";
+import { getStaffCurrentUser } from "@/lib/auth";
 
-type Row = { id: string; name: string; detail: string; status: string; value: string };
-type Module = { title: string; description: string; columns: string[]; rows: Row[]; fields: string[]; statuses: string[] };
-
-const makeRows = (items: [string,string,string,string,string][]): Row[] => items.map(([id,name,detail,status,value])=>({id,name,detail,status,value}));
-const modules: Record<string,Module> = {
- products:{title:"Products",description:"Manage the perfume catalogue, product details and publication status.",columns:["Product","SKU / Category","Status","Price"],fields:["Product name","SKU / Category","Price"],statuses:["Published","Draft","Out of stock"],rows:makeRows([["PR-001","Amber Oud — 50ml","LP-AO-050","Published","৳ 4,800"],["PR-002","Floral Muse — 30ml","LP-FM-030","Published","৳ 3,200"],["PR-003","Citrus Noir — 100ml","LP-CN-100","Draft","৳ 6,500"]])},
- categories:{title:"Categories",description:"Organise products into clear shopping categories.",columns:["Category","Description","Status","Products"],fields:["Category name","Description","Product count"],statuses:["Active","Hidden"],rows:makeRows([["CA-01","Floral","Soft floral fragrances","Active","12"],["CA-02","Woody","Warm woody notes","Active","18"],["CA-03","Citrus","Fresh citrus profiles","Hidden","7"]])},
- brands:{title:"Brands",description:"Maintain brand identities represented in the store.",columns:["Brand","Origin / Notes","Status","Products"],fields:["Brand name","Origin / Notes","Product count"],statuses:["Active","Hidden"],rows:makeRows([["BR-01","Lumière","French-inspired","Active","8"],["BR-02","Maison Oud","Middle Eastern-inspired","Active","11"]])},
- collections:{title:"Collections",description:"Curate signature collections and seasonal edits.",columns:["Collection","Description","Status","Products"],fields:["Collection name","Description","Product count"],statuses:["Active","Scheduled","Archived"],rows:makeRows([["CO-01","Signature","House favourites","Active","10"],["CO-02","The Oud Edit","Deep and rich scents","Scheduled","6"]])},
- orders:{title:"Orders",description:"Review orders and update their demo workflow status.",columns:["Order","Customer","Status","Total"],fields:["Order ID","Customer","Total"],statuses:["Pending","Processing","Shipped","Delivered","Cancelled"],rows:makeRows([["ORD-1048","LP-1048","A. Rahman","Processing","৳ 4,800"],["ORD-1047","LP-1047","N. Islam","Delivered","৳ 3,200"],["ORD-1046","LP-1046","S. Ahmed","Pending","৳ 6,500"]])},
- customers:{title:"Customers",description:"View customer directory and demo account standing.",columns:["Customer","Email","Status","Orders"],fields:["Customer name","Email","Order count"],statuses:["Active","VIP","Restricted"],rows:makeRows([["CU-001","Ayesha Rahman","ayesha@example.test","Active","4"],["CU-002","Nabil Islam","nabil@example.test","VIP","9"]])},
- inventory:{title:"Inventory",description:"Monitor sample stock levels and stock movement states.",columns:["Product","SKU","Status","On hand"],fields:["Product name","SKU","Quantity"],statuses:["In stock","Low stock","Out of stock"],rows:makeRows([["IN-001","Amber Oud","LP-AO-050","In stock","42"],["IN-002","Floral Muse","LP-FM-030","Low stock","5"],["IN-003","Citrus Noir","LP-CN-100","Out of stock","0"]])},
- payments:{title:"Payments",description:"Inspect illustrative payment records. No money is processed here.",columns:["Payment","Order","Method","Status"],fields:["Payment ID","Order ID","Method"],statuses:["Paid (demo)","Pending","Failed (demo)","Refunded (demo)"],rows:makeRows([["PY-001","LP-1048","Card (demo)","Paid (demo)","৳ 4,800"],["PY-002","LP-1047","COD","Pending","৳ 3,200"]])},
- coupons:{title:"Coupons & Discounts",description:"Create and review promotional codes for the demo storefront.",columns:["Code","Offer","Status","Usage"],fields:["Coupon code","Offer details","Usage limit"],statuses:["Active","Scheduled","Expired"],rows:makeRows([["CP-01","LUXE10","10% off","Active","18 / 100"],["CP-02","WELCOME5","৳ 500 off","Scheduled","0 / 50"]])},
- reviews:{title:"Reviews",description:"Moderate sample customer feedback before publication.",columns:["Review","Product","Status","Rating"],fields:["Reviewer","Product","Rating / comment"],statuses:["Pending","Approved","Hidden"],rows:makeRows([["RV-01","A. Rahman","Amber Oud","Pending","5 / 5"],["RV-02","N. Islam","Floral Muse","Approved","4 / 5"]])},
- banners:{title:"Banners",description:"Manage homepage campaign banners and visibility.",columns:["Banner","Placement","Status","Schedule"],fields:["Banner title","Placement","Schedule"],statuses:["Published","Draft","Scheduled"],rows:makeRows([["BN-01","The Art of Scent","Homepage hero","Published","Always"],["BN-02","Winter Notes","Collection page","Draft","Not set"]])},
- newsletter:{title:"Newsletter",description:"Review sample newsletter subscribers and subscription state.",columns:["Subscriber","Source","Status","Joined"],fields:["Email address","Source","Joined date"],statuses:["Subscribed","Unsubscribed"],rows:makeRows([["NL-01","reader@example.test","Footer form","Subscribed","2026-11-12"],["NL-02","guest@example.test","Checkout","Unsubscribed","2026-11-10"]])},
- analytics:{title:"Analytics",description:"Illustrative reporting cards and trends; no live store analytics are connected.",columns:["Metric","Period","Status","Value"],fields:["Metric name","Period","Value"],statuses:["Demo"],rows:makeRows([["AN-01","Gross sales","This month","Demo","৳ 248,500"],["AN-02","Conversion rate","This month","Demo","2.8%"],["AN-03","Average order value","This month","Demo","৳ 3,920"]])},
- staff:{title:"Staff & Roles",description:"Preview staff directory and role assignments. Permissions are not enforced yet.",columns:["Staff member","Email / Role","Status","Access"],fields:["Staff name","Email / Role","Access level"],statuses:["Active","Invited","Suspended"],rows:makeRows([["ST-01","Store Admin","admin@example.test · Owner","Active","Full (demo)"],["ST-02","Catalog Editor","editor@example.test · Editor","Invited","Catalog (demo)"]])},
- settings:{title:"Settings",description:"Review store profile, preferences and operational configuration placeholders.",columns:["Setting","Current value","Status","Scope"],fields:["Setting name","Current value","Scope"],statuses:["Configured (demo)","Needs setup"],rows:makeRows([["SE-01","Store name","LUXE PERFUME","Configured (demo)","General"],["SE-02","Support email","support@example.test","Needs setup","Contact"],["SE-03","Currency","BDT (৳)","Configured (demo)","Regional"]])}
+type Row = Record<string, unknown> & { id: number | string };
+type Resource = "products" | "categories" | "brands" | "collections" | "orders" | "customers" | "payments" | "inventory" | "contacts" | "returns" | "coupons" | "banners" | "reviews" | "newsletter" | "analytics" | "staff";
+const titles:Record<string,string>={products:"Products",categories:"Categories",brands:"Brands",collections:"Collections",orders:"Orders",customers:"Customers",payments:"Payments",inventory:"Inventory","contact-messages":"Contact Messages",returns:"Return Requests",coupons:"Coupons & Discounts",banners:"Banners",reviews:"Reviews",newsletter:"Newsletter",analytics:"Analytics",staff:"Staff & Roles"};
+const aliases:Record<string,string>={"contact-messages":"contacts","returns":"returns"};
+const unsupported:Record<string,string>={
+ staff:"Staff and role administration endpoints are not available in the current backend.",
+ settings:"Store settings endpoints are not available in the current backend."
 };
 
-const slugMap: Record<string,string> = { "promotions":"coupons", "coupons":"coupons", "staff-roles":"staff", "newsletter":"newsletter", "reports":"analytics" };
 export function ManagementWorkspace({section}:{section:string}) {
- const key=slugMap[section] ?? section;
- const config=modules[key];
- const [rows,setRows]=useState<Row[]>(config?.rows ?? []);
+ const key=aliases[section]||section;
+ const resource=key as Resource;
+ const supported=["products","categories","brands","collections","orders","customers","payments","inventory","contacts","returns","coupons","banners","reviews","newsletter","analytics","staff"].includes(resource);
+ const [rows,setRows]=useState<Row[]>([]);
+ const [analytics,setAnalytics]=useState<AnalyticsOverview|null>(null);
+ const [productImages,setProductImages]=useState<Array<Record<string,unknown>>>([]);
+ const [canManageCustomers,setCanManageCustomers]=useState(false);
  const [query,setQuery]=useState("");
- const [status,setStatus]=useState("All statuses");
- const [adding,setAdding]=useState(false);
- const [editing,setEditing]=useState<string|null>(null);
- const [draft,setDraft]=useState(["","",""]);
+ const [loading,setLoading]=useState(true);
+ const [saving,setSaving]=useState(false);
+ const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
- const filtered=useMemo(()=>rows.filter(r=>(status==="All statuses"||r.status===status)&&Object.values(r).join(" ").toLowerCase().includes(query.toLowerCase())),[rows,query,status]);
- if(!config) return <section className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-8"><p className="text-xs uppercase tracking-[.2em] text-[var(--gold)]">Admin workspace</p><h1 className="mt-3 text-2xl font-semibold">Page not found</h1><p className="mt-2 text-sm text-[var(--muted)]">This admin section does not exist.</p></section>;
- const addRow=()=>{if(!draft[0].trim())return;const next:Row={id:"DM-"+String(Date.now()).slice(-5),name:draft[0],detail:draft[1]||"Demo entry",status:config.statuses[0],value:draft[2]||"—"};setRows(current=>[next,...current]);setDraft(["","",""]);setAdding(false);setNotice("Demo record added in this browser session only.");};
- const saveEdit=()=>{if(!editing||!draft[0].trim())return;setRows(current=>current.map(r=>r.id===editing?{...r,name:draft[0],detail:draft[1]||r.detail,value:draft[2]||r.value}:r));setEditing(null);setDraft(["","",""]);setNotice("Demo record updated in this temporary view.");};
- const startEdit=(row:Row)=>{setEditing(row.id);setAdding(false);setDraft([row.name,row.detail,row.value]);};
- const remove=(id:string)=>{setRows(current=>current.filter(r=>r.id!==id));setNotice("Demo record removed from this temporary view.");};
- const updateStatus=(id:string,next:string)=>{setRows(current=>current.map(r=>r.id===id?{...r,status:next}:r));setNotice("Demo status updated in this temporary view.");};
+ const [formOpen,setFormOpen]=useState(false);
+ const [editing,setEditing]=useState<number|null>(null);
+ const [draft,setDraft]=useState({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0",roleCodes:"",altText:"",primaryImage:"true"});
+ const title=titles[section]||titles[key]||"Management";
+
+ const load=useCallback(async()=>{
+  if(!supported){setLoading(false);return;}
+  setLoading(true);setError("");
+  try{
+   let result:unknown[]=[];
+   if(resource==="products")result=(await adminApi.products(query)).items;
+   if(resource==="categories")result=await adminApi.categories();
+   if(resource==="brands")result=await adminApi.brands();
+   if(resource==="collections")result=await adminApi.collections();
+   if(resource==="orders")result=(await adminApi.orders(query)).items;
+   if(resource==="customers")result=(await adminApi.customers(query)).items;
+   if(resource==="payments")result=(await adminApi.payments(query)).items;
+   if(resource==="inventory")result=await adminApi.lowStock();
+   if(resource==="contacts")result=(await adminApi.contacts()).items;
+   if(resource==="returns")result=await adminApi.returns();
+   if(resource==="coupons")result=(await adminApi.coupons(query)).items;
+   if(resource==="banners")result=(await adminApi.banners(query)).items;
+   if(resource==="reviews")result=(await adminApi.reviews(query)).items;
+   if(resource==="newsletter")result=(await adminApi.newsletterSubscribers(query)).items;
+   if(resource==="analytics"){setAnalytics(await adminApi.analytics());result=[];}
+   if(resource==="staff")result=await adminApi.staffUsers();
+   setRows(result as Row[]);
+  }catch(reason){setError(reason instanceof Error?reason.message:"Unable to load records from the backend.");setRows([]);}
+  finally{setLoading(false);}
+ },[query,resource,supported]);
+
+ useEffect(()=>{void load();},[load]);
+ useEffect(()=>{getStaffCurrentUser().then(user=>setCanManageCustomers(user.roles.includes("ADMIN"))).catch(()=>setCanManageCustomers(false));},[]);
+ const filtered=useMemo(()=>rows.filter(row=>Object.values(row).join(" ").toLowerCase().includes(query.toLowerCase())),[rows,query]);
+
+ function resetForm(){setProductImages([]);setDraft({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0",roleCodes:"",altText:"",primaryImage:"true"});setEditing(null);setFormOpen(false);}
+ function startEdit(row:Row){
+  setEditing(Number(row.id));
+  if(resource==="products"){setProductImages([]);adminApi.productImages(Number(row.id)).then(setProductImages).catch(reason=>setError(reason instanceof Error?reason.message:"Could not load product images."));}
+  setDraft({name:String(row.name||row.code||row.title||""),slug:String(row.slug||""),description:String(row.description||row.subtitle||""),categoryId:String(row.category_id||""),brandId:String(row.brand_id||""),sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:String(row.discount_type||"PERCENTAGE"),discountValue:String(row.discount_value||"10"),minimumOrderAmount:String(row.minimum_order_amount||"0"),maximumDiscountAmount:String(row.maximum_discount_amount||""),usageLimit:String(row.usage_limit||""),perUserLimit:String(row.per_user_limit||""),startsAt:String(row.starts_at||""),endsAt:String(row.ends_at||""),imageUrl:"",altText:"",primaryImage:"true",targetUrl:String(row.target_url||""),placement:String(row.placement||"HOME_HERO"),sortOrder:String(row.sort_order||"0"),roleCodes:String(row.role_codes||"")});
+  setFormOpen(true);
+ }
+ async function submit(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();setSaving(true);setError("");setNotice("");
+  try{
+   if(["categories","brands","collections"].includes(resource)){
+    const body={name:draft.name.trim(),slug:draft.slug.trim(),description:draft.description.trim(),active:true};
+    if(!body.name)throw new Error("Name is required.");
+    if(resource==="categories")editing?await adminApi.updateCategory(editing,body):await adminApi.createCategory(body);
+    if(resource==="brands")editing?await adminApi.updateBrand(editing,body):await adminApi.createBrand(body);
+    if(resource==="collections")editing?await adminApi.updateCollection(editing,body):await adminApi.createCollection(body);
+   }else if(resource==="products"){
+    if(editing){
+     const body:Record<string,unknown>={name:draft.name.trim(),slug:draft.slug.trim(),description:draft.description.trim()};
+     if(draft.categoryId)body.categoryId=Number(draft.categoryId);
+     if(draft.brandId)body.brandId=Number(draft.brandId);
+     await adminApi.updateProduct(editing,body);
+     if(draft.imageUrl.trim())await adminApi.addProductImage(editing,{imageUrl:draft.imageUrl.trim(),altText:draft.altText.trim(),sortOrder:productImages.length,primary:draft.primaryImage==="true"});
+    }else{
+     if(!draft.name.trim()||!draft.categoryId)throw new Error("Product name and category ID are required.");
+     const product=await adminApi.createProduct({name:draft.name.trim(),slug:draft.slug.trim(),categoryId:Number(draft.categoryId),brandId:draft.brandId?Number(draft.brandId):null,shortDescription:draft.description.trim(),description:draft.description.trim(),productType:"STANDARD",status:"DRAFT",featured:false});
+     if(draft.imageUrl.trim())await adminApi.addProductImage(Number(product.id),{imageUrl:draft.imageUrl.trim(),altText:draft.altText.trim(),sortOrder:0,primary:true});
+     if(draft.sku.trim()&&draft.variantName.trim()&&draft.price.trim()){
+      await adminApi.createVariant(Number(product.id),{sku:draft.sku.trim(),variantName:draft.variantName.trim(),price:Number(draft.price),volumeMl:Number(draft.variantName.match(/\d+(?:\.\d+)?/)?.[0]||0)||null,initialStock:Number(draft.initialStock||0),isDefault:true,isActive:true});
+     }
+    }
+   }else if(resource==="coupons"){
+    const body={code:draft.name.trim().toUpperCase(),description:draft.description.trim(),discountType:draft.discountType,discountValue:Number(draft.discountValue),minimumOrderAmount:Number(draft.minimumOrderAmount||0),maximumDiscountAmount:draft.maximumDiscountAmount?Number(draft.maximumDiscountAmount):null,usageLimit:draft.usageLimit?Number(draft.usageLimit):null,perUserLimit:draft.perUserLimit?Number(draft.perUserLimit):null,startsAt:draft.startsAt||null,endsAt:draft.endsAt||null,active:true};
+    if(editing)await adminApi.updateCoupon(editing,body);else await adminApi.createCoupon(body);
+   }else if(resource==="banners"){
+    const body={title:draft.name.trim(),subtitle:draft.description.trim(),imageUrl:draft.imageUrl.trim(),targetUrl:draft.targetUrl.trim()||null,placement:draft.placement,startsAt:draft.startsAt||null,endsAt:draft.endsAt||null,sortOrder:Number(draft.sortOrder||0),active:true};
+    if(editing)await adminApi.updateBanner(editing,body);else await adminApi.createBanner(body);
+   }else if(resource==="staff"){
+    const roleCodes=draft.roleCodes.split(",").map(value=>value.trim().toUpperCase()).filter(Boolean);
+    if(!editing||!roleCodes.length)throw new Error("Select at least one staff role.");
+    await adminApi.updateStaffRoles(editing,roleCodes);
+   }else if(resource==="inventory"){
+    const variantId=Number(draft.categoryId);
+    const delta=Number(draft.quantityChange);
+    if(!variantId||!Number.isInteger(delta)||delta===0||!draft.note.trim())throw new Error("Enter variant ID, a non-zero whole-number adjustment and a note.");
+    await adminApi.adjustInventory(variantId,delta,draft.note.trim());
+   }else{
+    throw new Error("This section is read-only in the current backend integration.");
+   }
+   setNotice(editing?"Record updated in the database.":"Record created in the database.");
+   resetForm();await load();
+  }catch(reason){setError(reason instanceof Error?reason.message:"The operation failed.");}
+  finally{setSaving(false);}
+ }
+ async function archive(row:Row){
+  if(!window.confirm("Archive/deactivate this record in the database?"))return;
+  setError("");setNotice("");
+  try{
+   if(resource==="products")await adminApi.archiveProduct(Number(row.id));
+   else if(resource==="categories")await adminApi.archiveCategory(Number(row.id));
+   else if(resource==="brands")await adminApi.archiveBrand(Number(row.id));
+   else if(resource==="collections")await adminApi.archiveCollection(Number(row.id));
+   else if(resource==="coupons")await adminApi.deactivateCoupon(Number(row.id));
+   else if(resource==="banners")await adminApi.deactivateBanner(Number(row.id));
+   else throw new Error("Archive is not supported for this resource.");
+   setNotice("Record archived/deactivated in the database.");await load();
+  }catch(reason){setError(reason instanceof Error?reason.message:"Archive failed.");}
+ }
+ async function updateOrder(row:Row,status:string){
+  try{await adminApi.updateOrderStatus(String(row.orderNumber),status,"Updated from Admin Website");setNotice("Order status saved to the database.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Order update failed.");}
+ }
+ async function publishProduct(row:Row){
+  try{await adminApi.updateProduct(Number(row.id),{status:"ACTIVE"});setNotice("Product published to the live catalogue.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Product cannot be published until its required variant is configured.");}
+ }
+ async function updateCustomer(row:Row,status:string){
+  try{await adminApi.updateCustomerStatus(Number(row.id),status);setNotice("Customer account status saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Customer status update failed. This action may require Admin permission.");}
+ }
+ async function requestRefund(row:Row){
+  const amountText=window.prompt("Refund amount in "+String(row.currency||"BDT"),String(row.amount||""));
+  if(amountText===null)return;
+  const amount=Number(amountText);
+  if(!Number.isFinite(amount)||amount<=0){setError("Enter a valid positive refund amount.");return;}
+  const reason=window.prompt("Reason for manual refund review","");
+  if(reason===null||!reason.trim()){setError("A refund reason is required.");return;}
+  try{
+   const key=typeof crypto!=="undefined"&&"randomUUID" in crypto?crypto.randomUUID():String(row.payment_id||row.id)+"-"+Date.now();
+   await adminApi.requestRefund(Number(row.payment_id||row.id),amount,String(row.currency||"BDT"),reason.trim(),key);
+   setNotice("Refund request queued for manual staff review. No money has been transferred.");await load();
+  }catch(reason){setError(reason instanceof Error?reason.message:"Refund request could not be queued.");}
+ }
+ async function confirmPayment(row:Row){
+  try{await adminApi.confirmCodPayment(Number(row.payment_id||row.id));setNotice("COD collection confirmation saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"COD collection could not be confirmed.");}
+ }
+ async function decideReturn(row:Row,decision:"APPROVED"|"REJECTED"){
+  try{await adminApi.decideReturn(Number(row.id),decision,"Reviewed from Admin Website");setNotice("Return request decision saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Return decision could not be saved.");}
+ }
+ async function moderateReview(row:Row,status:"APPROVED"|"REJECTED"){
+  try{await adminApi.moderateReview(Number(row.id),status);setNotice("Review moderation saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Review moderation failed.");}
+ }
+ async function unsubscribeSubscriber(row:Row){
+  try{await adminApi.unsubscribeNewsletter(Number(row.id));setNotice("Subscriber marked as unsubscribed.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Subscriber update failed.");}
+ }
+ async function updateContact(row:Row,status:string){
+  try{await adminApi.updateContactStatus(Number(row.id),status);setNotice("Contact message status saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Contact update failed.");}
+ }
+
+ if(resource==="analytics")return <section className="space-y-6"><div><p className="text-xs uppercase tracking-[.2em] text-[var(--gold)]">Live analytics · database aggregates</p><h1 className="mt-2 text-3xl font-semibold">Store Analytics</h1><p className="mt-2 text-sm text-[var(--muted)]">Metrics are calculated by the backend from current store records.</p></div>{loading?<p className="muted">Loading analytics…</p>:error?<p className="form-error" role="alert">{error}</p>:analytics?<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Object.entries({"Active products":analytics.activeProducts,"Total orders":analytics.totalOrders,"Pending orders":analytics.pendingOrders,"Active customers":analytics.activeCustomers,"Paid revenue (BDT)":Number(analytics.paidRevenue).toLocaleString("en-BD"),"Low-stock variants":analytics.lowStockVariants,"New contact messages":analytics.newContactMessages,"Requested returns":analytics.requestedReturns,"Subscribed newsletter":analytics.subscribedNewsletter,"Pending payments":analytics.pendingPayments}).map(([label,value])=><article key={label} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-5"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-3 text-2xl font-semibold">{value}</p></article>)}</div>:<p className="muted">No analytics data returned.</p>}</section>;
+ if(!supported)return <section className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-8"><p className="text-xs uppercase tracking-[.2em] text-[var(--gold)]">Backend integration status</p><h1 className="mt-3 text-2xl font-semibold">{title}</h1><p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">{unsupported[section]||"This section has no corresponding backend endpoint yet."}</p><p className="mt-4 text-xs text-[#d2bd95]">No demo records are shown or changed here. This module remains pending until its secure backend API is implemented.</p></section>;
+
  return <div className="space-y-6">
-  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[.22em] text-[var(--gold)]">Management · Demo data</p><h1 className="mt-2 text-3xl font-semibold">{config.title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">{config.description}</p></div><button onClick={()=>setAdding(v=>!v)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--gold)] px-4 py-2.5 text-sm font-semibold text-[#17130d]"><Plus size={16}/>{adding?"Close form":"Add new"}</button></div>
-  <div className="rounded-xl border border-[#6b542f] bg-[#201a10] px-4 py-3 text-xs leading-5 text-[#d9c49f]">DEMO MODE — changes are temporary UI state only. No backend, database, payment processing, email delivery or real store records are connected.</div>
-  {(adding||editing)&&<section className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5"><div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">{editing?"Edit demo record":"Create demo record"}</h2><button aria-label="Close form" onClick={()=>{setAdding(false);setEditing(null);setDraft(["","",""]);}}><X size={18}/></button></div><div className="grid gap-3 md:grid-cols-3">{config.fields.map((field,i)=><label key={field} className="text-xs text-[var(--muted)]">{field}<input value={draft[i]??""} onChange={e=>setDraft(d=>d.map((v,n)=>n===i?e.target.value:v))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--gold)]" placeholder={field}/></label>)}</div><button onClick={editing?saveEdit:addRow} disabled={!draft[0].trim()} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#80663e] px-4 py-2 text-sm text-[var(--gold)] disabled:opacity-40"><Check size={15}/>{editing?"Save changes":"Save demo record"}</button></section>}
-  <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]"><div className="flex flex-col gap-3 border-b border-[var(--line)] p-4 md:flex-row md:items-center md:justify-between"><label className="relative block w-full md:max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={"Search "+config.title.toLowerCase()+"..."} className="w-full rounded-lg border border-[var(--line)] bg-[#100f0d] py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[var(--gold)]"/></label><label className="flex items-center gap-2 text-xs text-[var(--muted)]"><Filter size={14}/><select value={status} onChange={e=>setStatus(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"><option>All statuses</option>{config.statuses.map(s=><option key={s}>{s}</option>)}</select></label></div>
-  {filtered.length===0?<div className="px-6 py-16 text-center"><p className="font-medium">No records found</p><p className="mt-2 text-sm text-[var(--muted)]">Try changing the search or filter, or add a demo record.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-sm"><thead className="bg-[#201d18] text-xs uppercase tracking-wider text-[var(--muted)]"><tr>{config.columns.map(c=><th key={c} className="px-5 py-3 font-medium">{c}</th>)}<th className="px-5 py-3 font-medium">Actions</th></tr></thead><tbody>{filtered.map(row=><tr key={row.id} className="border-t border-[var(--line)] hover:bg-white/[.02]"><td className="px-5 py-4"><div className="font-medium">{row.name}</div><div className="mt-1 text-[10px] text-[var(--muted)]">{row.id}</div></td><td className="px-5 py-4 text-[#c9c0b3]">{row.detail}</td><td className="px-5 py-4"><select aria-label={"Status for "+row.name} value={row.status} onChange={e=>updateStatus(row.id,e.target.value)} className="max-w-[150px] rounded-full border border-[#655333] bg-[#17130d] px-2.5 py-1.5 text-xs text-[var(--gold)]">{config.statuses.map(s=><option key={s}>{s}</option>)}</select></td><td className="px-5 py-4 text-[#e1d5c2]">{row.value}</td><td className="px-5 py-4"><div className="flex items-center gap-2"><button title="Edit status" aria-label={"Edit "+row.name} onClick={()=>startEdit(row)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-white"><Pencil size={14}/></button><button title="Delete demo record" aria-label={"Delete "+row.name} onClick={()=>remove(row.id)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-red-300"><Trash2 size={14}/></button></div></td></tr>)}</tbody></table></div>}
-  <div className="flex flex-col gap-2 border-t border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between"><span>Showing {filtered.length} of {rows.length} demo records</span><span>Changes are not saved to a server</span></div></section>
-  {notice&&<div role="status" className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-xs text-[var(--muted)]">{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss message"><X size={14}/></button></div>}
+  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[.22em] text-[var(--gold)]">Live database · {resource}</p><h1 className="mt-2 text-3xl font-semibold">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Records below are retrieved from the authenticated LUXE backend API.</p></div><div className="flex gap-2"><button onClick={()=>void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2.5 text-sm"><RefreshCw size={15}/>Refresh</button>{["products","categories","brands","collections","inventory","coupons","banners"].includes(resource)&&<button onClick={()=>{setEditing(null);setFormOpen(v=>!v);}} className="inline-flex items-center gap-2 rounded-lg bg-[var(--gold)] px-4 py-2.5 text-sm font-semibold text-[#17130d]"><Plus size={16}/>{formOpen?"Close":"Add new"}</button>}</div></div>
+  <div className="rounded-xl border border-[#365b43] bg-[#122017] px-4 py-3 text-xs leading-5 text-[#b9d8c0]">LIVE API MODE — changes are sent to the backend. Server-side permissions, validation and business rules remain authoritative.</div>
+  {error&&<div className="rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-200" role="alert">{error}</div>}
+  {notice&&<div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-sm text-[#c7d9c7]" role="status">{notice}</div>}
+  {formOpen&&<form onSubmit={submit} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5"><div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">{editing?"Update database record":"Create database record"}</h2><button type="button" onClick={resetForm} aria-label="Close form"><X size={18}/></button></div>
+   {["categories","brands","collections","products","coupons","banners"].includes(resource)&&<div className="grid gap-3 md:grid-cols-2">
+    <label className="text-xs text-[var(--muted)]">Name *<input required value={draft.name} onChange={e=>setDraft(d=>({...d,name:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Slug<input value={draft.slug} onChange={e=>setDraft(d=>({...d,slug:e.target.value}))} placeholder="Auto-generated when blank" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)] md:col-span-2">Description<textarea value={draft.description} onChange={e=>setDraft(d=>({...d,description:e.target.value}))} rows={3} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    {resource==="products"&&<><label className="text-xs text-[var(--muted)] md:col-span-2">Product image URL (HTTPS)<input type="url" value={draft.imageUrl} onChange={e=>setDraft(d=>({...d,imageUrl:e.target.value}))} placeholder="https://res.cloudinary.com/…" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Image alt text<input value={draft.altText} onChange={e=>setDraft(d=>({...d,altText:e.target.value}))} maxLength={255} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Set as primary image<select value={draft.primaryImage} onChange={e=>setDraft(d=>({...d,primaryImage:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"><option value="true">Yes</option><option value="false">No</option></select></label></>}
+    {resource==="products"&&<><label className="text-xs text-[var(--muted)]">Category ID *<input required type="number" min="1" value={draft.categoryId} onChange={e=>setDraft(d=>({...d,categoryId:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Brand ID (optional)<input type="number" min="1" value={draft.brandId} onChange={e=>setDraft(d=>({...d,brandId:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>{!editing&&<><label className="text-xs text-[var(--muted)]">Initial variant SKU<input value={draft.sku} onChange={e=>setDraft(d=>({...d,sku:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Variant name / size<input value={draft.variantName} onChange={e=>setDraft(d=>({...d,variantName:e.target.value}))} placeholder="50ml" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Variant price (BDT)<input type="number" min="0" step="0.01" value={draft.price} onChange={e=>setDraft(d=>({...d,price:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Initial stock<input type="number" min="0" step="1" value={draft.initialStock} onChange={e=>setDraft(d=>({...d,initialStock:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label></>}</>}
+   </div>}
+   {resource==="coupons"&&<div className="mt-4 grid gap-3 md:grid-cols-2">
+    <label className="text-xs text-[var(--muted)]">Discount type<select value={draft.discountType} onChange={e=>setDraft(d=>({...d,discountType:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"><option value="PERCENTAGE">Percentage</option><option value="FIXED">Fixed amount (BDT)</option></select></label>
+    <label className="text-xs text-[var(--muted)]">Discount value *<input required type="number" min="0.01" step="0.01" value={draft.discountValue} onChange={e=>setDraft(d=>({...d,discountValue:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Minimum order (BDT)<input type="number" min="0" step="0.01" value={draft.minimumOrderAmount} onChange={e=>setDraft(d=>({...d,minimumOrderAmount:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Maximum discount (optional)<input type="number" min="0.01" step="0.01" value={draft.maximumDiscountAmount} onChange={e=>setDraft(d=>({...d,maximumDiscountAmount:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Total usage limit<input type="number" min="1" value={draft.usageLimit} onChange={e=>setDraft(d=>({...d,usageLimit:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Per-customer limit<input type="number" min="1" value={draft.perUserLimit} onChange={e=>setDraft(d=>({...d,perUserLimit:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Starts at<input type="datetime-local" value={draft.startsAt} onChange={e=>setDraft(d=>({...d,startsAt:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Ends at<input type="datetime-local" value={draft.endsAt} onChange={e=>setDraft(d=>({...d,endsAt:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+   </div>}
+   {resource==="banners"&&<div className="mt-4 grid gap-3 md:grid-cols-2">
+    <label className="text-xs text-[var(--muted)] md:col-span-2">Image URL (HTTPS) *<input required type="url" value={draft.imageUrl} onChange={e=>setDraft(d=>({...d,imageUrl:e.target.value}))} placeholder="https://res.cloudinary.com/…" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Target URL<input type="url" value={draft.targetUrl} onChange={e=>setDraft(d=>({...d,targetUrl:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Placement<select value={draft.placement} onChange={e=>setDraft(d=>({...d,placement:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"><option>HOME_HERO</option><option>HOME_PROMO</option><option>SHOP_TOP</option><option>COLLECTION</option></select></label>
+    <label className="text-xs text-[var(--muted)]">Sort order<input type="number" value={draft.sortOrder} onChange={e=>setDraft(d=>({...d,sortOrder:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Starts at<input type="datetime-local" value={draft.startsAt} onChange={e=>setDraft(d=>({...d,startsAt:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+    <label className="text-xs text-[var(--muted)]">Ends at<input type="datetime-local" value={draft.endsAt} onChange={e=>setDraft(d=>({...d,endsAt:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label>
+   </div>}
+   {resource==="staff"&&<div className="mt-4"><label className="text-xs text-[var(--muted)]">Staff roles (comma-separated) *<input required value={draft.roleCodes} onChange={e=>setDraft(d=>({...d,roleCodes:e.target.value}))} placeholder="MANAGER, INVENTORY_STAFF" className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><p className="mt-2 text-xs text-[var(--muted)]">Allowed roles: ADMIN, MANAGER, INVENTORY_STAFF. You cannot change your own roles.</p></div>}
+   {resource==="products"&&editing!==null&&productImages.length>0&&<div className="mt-4 rounded-lg border border-[var(--line)] p-3 md:col-span-2"><p className="mb-2 text-xs uppercase tracking-wider text-[var(--muted)]">Existing product images</p>{productImages.map(image=><div key={String(image.id)} className="flex items-center justify-between gap-3 border-t border-[var(--line)] py-2 text-xs"><a href={String(image.image_url)} target="_blank" rel="noreferrer" className="max-w-[75%] truncate text-[var(--gold)]">{String(image.image_url)}</a><button type="button" onClick={async()=>{try{await adminApi.deleteProductImage(Number(image.id));setProductImages(items=>items.filter(item=>item.id!==image.id));}catch(reason){setError(reason instanceof Error?reason.message:"Could not delete product image.");}}} className="text-red-300">REMOVE</button></div>)}</div>}
+   {resource==="inventory"&&<div className="grid gap-3 md:grid-cols-3"><label className="text-xs text-[var(--muted)]">Variant ID *<input required type="number" min="1" value={draft.categoryId} onChange={e=>setDraft(d=>({...d,categoryId:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Quantity change (+/-) *<input required type="number" step="1" value={draft.quantityChange} onChange={e=>setDraft(d=>({...d,quantityChange:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label><label className="text-xs text-[var(--muted)]">Reason / note *<input required maxLength={255} value={draft.note} onChange={e=>setDraft(d=>({...d,note:e.target.value}))} className="mt-2 w-full rounded-lg border border-[var(--line)] bg-[#100f0d] px-3 py-2.5 text-sm text-white"/></label></div>}
+   <button type="submit" disabled={saving} className="mt-5 inline-flex items-center gap-2 rounded-lg border border-[#80663e] px-4 py-2.5 text-sm text-[var(--gold)] disabled:opacity-50"><Check size={15}/>{saving?"SAVING…":editing?"SAVE CHANGES":"SAVE TO DATABASE"}</button>
+   {resource==="products"&&!editing&&<p className="mt-3 text-xs text-[var(--muted)]">Products are created as DRAFT. Add a variant to establish a price and stock, then publish using the product status workflow. A variant is created only when SKU, variant name and price are all supplied.</p>}
+  </form>}
+  <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]"><div className="flex flex-col gap-3 border-b border-[var(--line)] p-4 sm:flex-row sm:items-center sm:justify-between"><label className="flex-1 text-xs text-[var(--muted)]"><span className="sr-only">Search records</span><div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[#100f0d] px-3"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={"Search "+title.toLowerCase()+"…"} className="w-full bg-transparent py-2.5 text-sm text-white outline-none"/></div></label><span className="text-xs text-[var(--muted)]">{filtered.length} loaded record(s)</span></div>
+  {loading?<div className="px-6 py-16 text-center text-sm text-[var(--muted)]">Loading live records…</div>:filtered.length===0?<div className="px-6 py-16 text-center"><p className="font-medium">No live records found</p><p className="mt-2 text-sm text-[var(--muted)]">Try refreshing or changing the search.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-[#201d18] text-xs uppercase tracking-wider text-[var(--muted)]"><tr><th className="px-5 py-3">Record</th><th className="px-5 py-3">Details</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Value</th><th className="px-5 py-3">Actions</th></tr></thead><tbody>{filtered.map((row,index)=>{
+   const id=String(row.id??row.variant_id??index);
+   const name=String(row.name||row.product_name||row.orderNumber||row.full_name||row.code||row.title||row.product_name||row.email||((row.first_name||row.last_name)?String(row.first_name||"")+" "+String(row.last_name||""):"")||row.variant_name||row.subject||"Record");
+   const detail=String(row.slug??row.category_name??row.brand_name??row.customerEmail??row.email??row.sku??row.order_number??"");
+   const status=String(row.status??row.orderStatus??row.order_status??row.returnStatus??row.return_status??row.account_status??row.paymentStatus??row.payment_status??row.moderation_status??row.subscription_status??(row.is_active===false?"INACTIVE":"ACTIVE"));
+   const value=String(row.price_min??row.discount_value??row.grandTotal??row.grand_total??row.amount??row.lifetime_value??row.available_quantity??row.quantity_on_hand??row.message??row.image_url??"—");
+   return <tr key={id} className="border-t border-[var(--line)] hover:bg-white/[.02]"><td className="px-5 py-4"><div className="font-medium">{name}</div><div className="mt-1 text-[10px] text-[var(--muted)]">#{id}</div></td><td className="max-w-[280px] truncate px-5 py-4 text-[#c9c0b3]">{detail}</td><td className="px-5 py-4">{resource==="orders"?<select value={status} onChange={e=>void updateOrder(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white"><option value={status}>{status}</option>{["CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED"].filter(s=>s!==status).map(s=><option key={s}>{s}</option>)}</select>:resource==="contacts"?<select value={status} onChange={e=>void updateContact(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white">{["NEW","IN_PROGRESS","RESOLVED","SPAM"].map(s=><option key={s}>{s}</option>)}</select>:resource==="customers"&&canManageCustomers?<select value={status} onChange={e=>void updateCustomer(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white">{["ACTIVE","SUSPENDED"].map(s=><option key={s}>{s}</option>)}</select>:status}</td><td className="max-w-[240px] truncate px-5 py-4 text-[#e1d5c2]">{value}</td><td className="px-5 py-4"><div className="flex items-center gap-2">{["products","categories","brands","collections","coupons","banners","staff"].includes(resource)&&<><button title="Edit" aria-label={"Edit "+name} onClick={()=>startEdit(row)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-white"><Pencil size={14}/></button><button title="Archive" aria-label={"Archive "+name} onClick={()=>void archive(row)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-red-300"><Trash2 size={14}/></button>{resource==="products"&&status==="DRAFT"&&<button title="Publish" onClick={()=>void publishProduct(row)} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">PUBLISH</button>}</>}{resource==="payments"&&String(row.payment_method)==="CASH_ON_DELIVERY"&&status!=="PAID"&&<button onClick={()=>void confirmPayment(row)} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">CONFIRM COD</button>}{resource==="payments"&&(status==="PAID"||status==="PARTIALLY_REFUNDED")&&<button onClick={()=>void requestRefund(row)} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">REQUEST REFUND</button>}{resource==="returns"&&status==="REQUESTED"&&<><button onClick={()=>void decideReturn(row,"APPROVED")} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">APPROVE</button><button onClick={()=>void decideReturn(row,"REJECTED")} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs text-red-300">REJECT</button></>}{resource==="reviews"&&status==="PENDING"&&<><button onClick={()=>void moderateReview(row,"APPROVED")} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">APPROVE</button><button onClick={()=>void moderateReview(row,"REJECTED")} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs text-red-300">REJECT</button></>}{resource==="newsletter"&&status!=="UNSUBSCRIBED"&&<button onClick={()=>void unsubscribeSubscriber(row)} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs text-red-300">UNSUBSCRIBE</button>}</div></td></tr>;
+  })}</tbody></table></div>}
+  <div className="flex items-center justify-between border-t border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)]"><span>Source: LUXE backend REST API</span><span>Server is authoritative</span></div></section>
  </div>;
 }

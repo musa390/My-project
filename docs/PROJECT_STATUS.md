@@ -14,6 +14,21 @@
 - Phase 8 — **In progress; initial backend implementation and CI verification PASS; not 100%.** Branch: `phase8/cart-wishlist-inventory`; draft PR #5 is open and unmerged. Persistent Customer cart/wishlist APIs, server-side price recalculation, stock validation, inventory movement audit, stock adjustment and low-stock APIs implemented. CI run 44134986481: MySQL 8.4, V1/V2/V3 applied, 26 tests, 0 failures/errors, Maven BUILD SUCCESS. Final review and owner-local clean-DB verification remain pending.
 - Phase 9 — **Steps 1–5 implementation, security regression fixes, documentation and branch-head CI: PASS.** Latest commit `97268ced3eb2148c2431e95587217a303ff90def`; GitHub Actions runs [#354](https://github.com/musa390/My-project/actions/runs/44159524207) and [#355](https://github.com/musa390/My-project/actions/runs/44159534434) both passed on Java 21 + MySQL 8.4 with `mvn --batch-mode --no-transfer-progress clean verify`: **47 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**. Customer checkout preview, transactional order creation, customer order history/detail/tracking/cancellation, Staff/Admin order list/detail/status transitions, inventory release and role/permission security are implemented. PR #6 remains open/draft/unmerged. Changed-file review confirms no Customer/Admin frontend or V1/V2/V3 migration changes; no V4 migration was required. Only owner-local clean-database verification remains pending; Phase 9 is not yet 100% until that separate Windows check passes.
 
+## Phase 12 — Additional Integrations
+- Working branch: `phase12/additional-integrations`; PR #9: https://github.com/musa390/My-project/pull/9 (open, unmerged).
+- Implemented optional Google OIDC, Cloudinary signed product-image upload, Resend email adapter, after-commit order/reset emails, newsletter double opt-in, contact inbox, notifications and Flyway V9.
+- GitHub CI verified 77 tests, 0 failures/errors; migration CI verified V9. Live provider account checks remain dependent on owner configuration.
+- Owner-local Maven verification is blocked by MySQL authentication: `Access denied for user 'luxe_app'@'localhost'` (SQL 1045). Preserve the existing DB; resolve credentials or use a separate clean verification DB. Phase 12 is not 100% signed off yet.
+
+## Phase 13 — Frontend & Backend Integration
+- Working branch: `phase13/frontend-backend-integration`; draft PR #10: https://github.com/musa390/My-project/pull/10 (open, mergeable, unmerged; base `phase12/additional-integrations`).
+- Customer integration: authentication/password recovery, live catalog/product/collection detail, exact variant prices and stock, server cart/wishlist, addresses, server checkout quote, orders, COD, tracking, contact and newsletter.
+- Admin integration: Admin/Manager auth and role guard; product/taxonomy CRUD, order/customer/payment/COD/refund, inventory, returns, contact, coupons, banners, review moderation, newsletter, analytics and staff role management.
+- Removed the hardcoded demo product catalogue and synthetic size-price calculations. Product deep links, sitemap, cart hydration after login and Buy Now sequencing were corrected.
+- Backend CI on implementation commit `814755d`: 80 tests, 0 failures/errors, Flyway 9 migrations validated, Maven BUILD SUCCESS. [Backend CI](https://github.com/musa390/My-project/actions/runs/44245739560).
+- Customer/Admin frontend CI on `814755d`: verification helper, typecheck, lint, production build and route smoke tests passed. [Frontend CI](https://github.com/musa390/My-project/actions/runs/44245739726).
+- Remaining acceptance: owner-local MySQL credential repair/clean DB and full browser end-to-end QA against the database. Settings API, staff account creation, Google OAuth live provider check, Cloudinary upload wizard and bKash/Nagad gateways are explicitly separate/unavailable work; UI does not fake these operations. Phase 13 is implementation + CI verified, not yet 100% owner-accepted.
+
 ## Phase 4 — Database Design
 - MySQL 8.4, InnoDB, utf8mb4; database `luxe_perfume`.
 - 30 tables, 37 foreign-key relationships, 38 CHECK constraints.
@@ -83,7 +98,7 @@
 | 9 | Checkout & Order Management | **GitHub-side complete; owner-local clean DB verification pending** |
 | 10 | Payment Integration | IN PROGRESS — bKash/Nagad sandbox work pending; SSLCommerz deferred |
 | 11 | Advanced Business Logic & OOP | Implementation + GitHub CI complete; owner-local Windows verification pending |
-| 12 | Additional Integrations | Pending |
-| 13 | Frontend & Backend Integration | Pending |
+| 12 | Additional Integrations | Implementation + CI verified; local MySQL/provider acceptance pending |
+| 13 | Frontend & Backend Integration | Implementation + CI verified; local database/browser E2E acceptance pending |
 | 14 | Testing, Security & QA | Pending |
 | 15 | Deployment & GitHub Release | Pending |

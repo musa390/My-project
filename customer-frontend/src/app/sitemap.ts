@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
-import { products } from "@/lib/products";
+import { getCatalog, getCollections } from "@/lib/commerce";
+
+export const dynamic = "force-dynamic";
 
 const staticRoutes = [
   "", "/shop", "/collections", "/best-sellers", "/new-arrivals",
@@ -7,7 +9,7 @@ const staticRoutes = [
   "/return-refund-policy", "/privacy-policy", "/terms-conditions",
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL;
   if (!configuredUrl) return [];
 
@@ -20,10 +22,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   const base = baseUrl.toString().replace(/\/$/, "");
-  const collectionSlugs = [...new Set(products.map((product) => product.collection))]
-    .map((collection) => `/collections/${encodeURIComponent(collection.toLowerCase().replace(/\s+/g, "-"))}`);
-  const productRoutes = products.map((product) => `/products/${encodeURIComponent(product.slug)}`);
-  const uniqueRoutes = [...new Set([...staticRoutes, ...collectionSlugs, ...productRoutes])];
+  const [catalog, collections] = await Promise.all([
+    getCatalog({ page: 0, size: 100, sort: "newest" }).catch(() => null),
+    getCollections().catch(() => []),
+  ]);
+
+  const collectionRoutes = collections
+    .map((collection) => String(collection.slug || ""))
+    .filter(Boolean)
+    .map((slug) => `/collections/${encodeURIComponent(slug)}`);
+  const productRoutes = (catalog?.items || [])
+    .map((product) => String(product.slug || ""))
+    .filter(Boolean)
+    .map((slug) => `/products/${encodeURIComponent(slug)}`);
+  const uniqueRoutes = [...new Set([...staticRoutes, ...collectionRoutes, ...productRoutes])];
 
   return uniqueRoutes.map((route) => ({
     url: `${base}${route}`,
