@@ -67,8 +67,6 @@ export async function getCsrfToken(forceRefresh = false): Promise<string> {
 
 export type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
-  /** Set false only for a request that intentionally does not use cookie-based CSRF. */
-  csrf?: boolean;
 };
 
 export async function apiRequest<T>(
@@ -88,7 +86,7 @@ export async function apiRequest<T>(
     body = JSON.stringify(options.body);
   }
 
-  if (isUnsafeMethod && options.csrf !== false) {
+  if (isUnsafeMethod) {
     headers.set("X-XSRF-TOKEN", await getCsrfToken());
   }
 
