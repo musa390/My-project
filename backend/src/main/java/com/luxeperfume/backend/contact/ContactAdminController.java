@@ -1,6 +1,7 @@
 package com.luxeperfume.backend.contact;
 
 import com.luxeperfume.backend.common.dto.ApiResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -32,7 +33,7 @@ public class ContactAdminController {
     }
     @PatchMapping("/{id}/status")
     public ApiResponse<Map<String,Object>> updateStatus(@PathVariable @Min(1) long id,
-            @RequestBody StatusRequest request){
+            @Valid @RequestBody StatusRequest request){
         int changed=jdbc.update("UPDATE contact_messages SET status=? WHERE id=?",request.status(),id);
         if(changed!=1) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"Contact message not found");
         return ApiResponse.success("Contact message updated",Map.of("id",id,"status",request.status()));
