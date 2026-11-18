@@ -298,7 +298,7 @@ export function AuthPage({mode}:{mode:"login"|"register"}){
     const fullName=String(data.get("name")||"").trim();
     const parts=fullName.split(/\\s+/);
     const firstName=parts.shift()||"";
-    const lastName=parts.join(" ");
+    const lastName=parts.join(" ")||firstName;
     await registerAccount({email:String(data.get("email")||""),password,firstName,lastName});
    }else{
     await signIn(String(data.get("email")||""),password);
