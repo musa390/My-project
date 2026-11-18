@@ -33,6 +33,18 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+      - name: Smoke test customer routes
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/luxe-customer.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then break; fi
+            sleep 2
+          done
+          for route in / /shop /login /register /forgot-password /cart /checkout /my-orders /track-order /contact; do
+            curl -fsS "http://127.0.0.1:3000$route" >/dev/null
+          done
 
   admin-frontend:
     runs-on: ubuntu-latest
@@ -48,3 +60,15 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+      - name: Smoke test admin routes
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/luxe-admin.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3001/login >/dev/null; then break; fi
+            sleep 2
+          done
+          for route in /login / /products /categories /brands /collections /orders /customers /inventory /payments /returns /contact-messages /coupons /banners /reviews /newsletter /analytics /staff; do
+            curl -fsS "http://127.0.0.1:3001$route" >/dev/null
+          done
