@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Component
+/** [POL] Percentage implementation selected through CouponDiscountStrategy. */
 public final class PercentageCouponDiscountStrategy extends AbstractCouponDiscountStrategy {
     @Override public boolean supports(String discountType) { return "PERCENTAGE".equals(discountType); }
 

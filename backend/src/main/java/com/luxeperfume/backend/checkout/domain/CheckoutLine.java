@@ -3,6 +3,7 @@ package com.luxeperfume.backend.checkout.domain;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+/** [ENC] Immutable checkout snapshot with validated identifiers, quantity and unit price. */
 public final class CheckoutLine {
     private final long productId;
     private final long categoryId;

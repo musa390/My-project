@@ -5,6 +5,7 @@ package com.luxeperfume.backend.checkout.policy;
  * Keeping the rule behind an interface allows future policy variants without
  * putting business rules in the HTTP controller or persistence code.
  */
+/** [ABS] Customer cancellation eligibility contract. */
 public interface OrderCancellationPolicy {
     boolean mayCustomerCancel(String orderStatus, String paymentStatus);
 }

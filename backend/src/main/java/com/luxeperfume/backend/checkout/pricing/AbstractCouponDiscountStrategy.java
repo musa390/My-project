@@ -4,6 +4,7 @@ import com.luxeperfume.backend.checkout.domain.Coupon;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/** [INH] Shared discount calculation invariants inherited by each concrete coupon strategy. */
 public abstract class AbstractCouponDiscountStrategy implements CouponDiscountStrategy {
     @Override
     public final BigDecimal calculate(Coupon coupon) {

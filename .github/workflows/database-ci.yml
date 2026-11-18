@@ -70,3 +70,31 @@ jobs:
           printf "%s\\n" "SHOW TABLES LIKE 'auth_sessions';" "SHOW TABLES LIKE 'password_reset_tokens';" | docker run --rm -i --network host --entrypoint mysql mysql:8.4 --batch --skip-column-names --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | tee phase6-auth-tables.txt
           grep -qx "auth_sessions" phase6-auth-tables.txt
           grep -qx "password_reset_tokens" phase6-auth-tables.txt
+
+      - name: Apply V4-V8 business logic migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in \
+            V4__payment_idempotency_refunds_and_events.sql \
+            V5__payment_refund_permission.sql \
+            V6__payment_refund_reconciliation_reference.sql \
+            V7__user_notifications.sql \
+            V8__return_requests_and_audit.sql; do
+            docker run --rm -i --network host -v "$GITHUB_WORKSPACE:/workspace" -w /workspace --entrypoint mysql mysql:8.4 --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "backend/src/main/resources/db/migration/$migration"
+          done
+
+      - name: Verify Phase 10 and Phase 11 business tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf "%s\\n" \
+            "SHOW TABLES LIKE 'payment_refunds';" \
+            "SHOW TABLES LIKE 'payment_events';" \
+            "SHOW TABLES LIKE 'user_notifications';" \
+            "SHOW TABLES LIKE 'return_requests';" \
+            "SHOW TABLES LIKE 'return_request_events';" \
+            | docker run --rm -i --network host --entrypoint mysql mysql:8.4 --batch --skip-column-names --host=127.0.0.1 --port=3306 --user=root --password="$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" | tee phase11-business-tables.txt
+          for table in payment_refunds payment_events user_notifications return_requests return_request_events; do
+            grep -qx "$table" phase11-business-tables.txt
+          done

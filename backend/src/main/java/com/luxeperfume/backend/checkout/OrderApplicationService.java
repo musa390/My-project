@@ -3,6 +3,8 @@ package com.luxeperfume.backend.checkout;
 import com.luxeperfume.backend.checkout.domain.CheckoutLine;
 import com.luxeperfume.backend.checkout.domain.Coupon;
 import com.luxeperfume.backend.checkout.domain.OrderNumberGenerator;
+import com.luxeperfume.backend.inventory.domain.InventoryQuantity;
+import com.luxeperfume.backend.notification.NotificationService;
 import com.luxeperfume.backend.checkout.dto.OrderPlacementRequest;
 import com.luxeperfume.backend.checkout.dto.OrderPlacementResponse;
 import com.luxeperfume.backend.checkout.inventory.InventoryReservationService;
@@ -25,27 +27,33 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
+/** [ENC] Order placement consumes validated domain values and persists immutable item snapshots transactionally. */
 public class OrderApplicationService {
     private final JdbcTemplate jdbc;
     private final CheckoutQuoteService quoteService;
     private final InventoryReservationService inventoryReservationService;
     private final OrderNumberGenerator orderNumberGenerator;
+    private final NotificationService notificationService;
     private final Clock clock;
 
     @Autowired
     public OrderApplicationService(JdbcTemplate jdbc, CheckoutQuoteService quoteService,
                                    InventoryReservationService inventoryReservationService,
-                                   OrderNumberGenerator orderNumberGenerator) {
-        this(jdbc, quoteService, inventoryReservationService, orderNumberGenerator, Clock.systemUTC());
+                                   OrderNumberGenerator orderNumberGenerator,
+                                   NotificationService notificationService) {
+        this(jdbc, quoteService, inventoryReservationService, orderNumberGenerator,
+                notificationService, Clock.systemUTC());
     }
 
     OrderApplicationService(JdbcTemplate jdbc, CheckoutQuoteService quoteService,
                             InventoryReservationService inventoryReservationService,
-                            OrderNumberGenerator orderNumberGenerator, Clock clock) {
+                            OrderNumberGenerator orderNumberGenerator,
+                            NotificationService notificationService, Clock clock) {
         this.jdbc = jdbc;
         this.quoteService = quoteService;
         this.inventoryReservationService = inventoryReservationService;
         this.orderNumberGenerator = orderNumberGenerator;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
@@ -131,8 +139,9 @@ public class OrderApplicationService {
             }
             long onHand = number(inventory.get("quantity_on_hand"));
             long reserved = number(inventory.get("quantity_reserved"));
-            long available = Math.max(0, onHand - reserved);
-            if (available < quantity) {
+            InventoryQuantity stock = new InventoryQuantity(onHand, reserved, 0);
+            long available = stock.availableQuantity();
+            if (!stock.canReserve(quantity)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Insufficient stock for " + variant.get("product_name")
                                 + ". Available quantity: " + available);
@@ -217,6 +226,7 @@ public class OrderApplicationService {
                 INSERT INTO order_status_history(order_id,from_status,to_status,note,changed_by)
                 VALUES(?,NULL,'PENDING','Order placed by customer',?)
                 """, orderId, userId);
+        notificationService.orderPlaced(userId, orderId);
 
         int converted = jdbc.update("""
                 UPDATE carts SET cart_status='CONVERTED'

@@ -1,0 +1,185 @@
+# Phase 10 — Payment Integration Plan
+
+**Status:** In progress. COD endpoints and refund manual-review workflow are implemented; CI is running on the latest commits. SSLCommerz is intentionally deferred by owner request. bKash/Nagad provider adapters and server-to-server callback verification remain blocked pending authoritative merchant sandbox specifications and approved sandbox access. No live gateway integration is active.
+**Working branch:** `phase10/payment-integration`
+**Base:** `phase9/checkout-order-management`
+**Previous work:** Phase 9 Draft PR #6 remains open, draft and unmerged.
+**Stack:** Java 21, Spring Boot 4.1.2, MySQL 8.4, Spring MVC, JdbcTemplate, Flyway, JUnit/MockMvc.
+**Scope:** Backend payment integration only. Customer Website and Admin Website frontend source must remain unchanged.
+
+## Objectives and acceptance criteria
+
+Implement Cash on Delivery (COD), SSLCommerz Sandbox, bKash Sandbox and Nagad Sandbox behind one Java OOP gateway abstraction. Persist payment attempts and provider references. Initiate payments only for an authenticated customer's own eligible order. Process provider callbacks/IPN safely and idempotently. Verify payment server-to-server before marking either a payment or order PAID. Handle failed/cancelled/pending transactions and refunds with an auditable record.
+
+The browser redirect or a frontend success message is never proof of payment. A payment can become PAID only after a provider-specific server-side verification response matches the expected order reference, amount, currency and transaction identity, and passes the provider's required signature/authentication checks.
+
+All environments remain sandbox/demo. No live gateway endpoints, live credentials, real-money processing or production activation in this phase.
+
+## Confirmed existing schema (V1)
+
+The Phase 9 branch already contains:
+- `customer_orders.payment_status`: `UNPAID`, `PENDING`, `PAID`, `FAILED`, `PARTIALLY_REFUNDED`, `REFUNDED`.
+- `payments`: order FK, provider, payment method, provider transaction ID/reference, amount, currency, payment status, initiation/completion timestamps and JSON provider payload.
+- Allowed providers: `COD`, `SSLCOMMERZ`, `BKASH`, `NAGAD`, `MANUAL`.
+- Allowed payment statuses: `INITIATED`, `PENDING`, `AUTHORIZED`, `PAID`, `FAILED`, `CANCELLED`, `REFUNDED`, `PARTIALLY_REFUNDED`.
+- Staff permission catalogue includes `payments.read`.
+
+The repository audit confirms there is no payment module/package or customer payment API yet. SecurityConfig already protects `/api/v1/staff/payments/**` with `PERM_payments.read`. The V1 `payments` table has no refund table, no dedicated merchant-side idempotency key, and no separate callback/event ledger. The existing `provider_transaction_id` unique key helps prevent duplicate provider transaction IDs but is not a complete refund/callback audit model. **A narrow V4 migration is justified** to add a unique merchant-side payment-attempt/idempotency reference and durable refund/event audit records. Exact DDL and indexes will be reviewed and integration-tested before the migration is added. V1/V2/V3 are immutable; do not edit them.
+
+## Java OOP architecture
+
+Controllers only validate/map HTTP requests and responses. Application services coordinate use cases and transactions. Domain objects enforce state and amount invariants. SQL stays in repository/persistence classes, not controllers or domain objects. Use `BigDecimal` for all monetary values.
+
+Planned abstractions:
+- `PaymentGateway` — provider contract for initiation, verification and (where officially supported) refund.
+- `SslCommerzGateway`, `BkashGateway`, `NagadGateway` — separate polymorphic adapters.
+- `CashOnDeliveryService` — COD-specific lifecycle, not a fake remote gateway.
+- `PaymentService` / `PaymentApplicationService` — orchestrates authenticated order ownership, payment attempt persistence and state transitions.
+- `PaymentRepository` and `RefundRepository` — persistence boundaries.
+- `PaymentStatus` / transition policy — allowed, monotonic state transitions and idempotency.
+- Provider HTTP clients/configuration — isolated from business rules; sandbox base URLs only.
+
+Use dependency injection and strategy/polymorphism. Do not put all provider behavior into a large switch/if-else block. Avoid inheritance unless a stable shared algorithm exists.
+
+## Planned API surface (final paths subject to security and schema audit)
+
+Customer:
+- `POST /api/v1/orders/{orderNumber}/payments` — initiate COD or a selected sandbox gateway for the authenticated customer's own eligible order.
+- Provider-specific server callbacks/IPN endpoints — accept only provider callback data, then verify with the provider from the backend.
+- `GET /api/v1/orders/{orderNumber}/payments` — return the authenticated customer's own payment history/status, without secrets or raw sensitive payloads.
+
+Staff/Admin:
+- `GET /api/v1/staff/payments` — permission-protected payment search/list/detail using `payments.read`.
+- Refund initiation/review endpoints only for authorized staff and only where the provider's official sandbox API supports it.
+
+No endpoint accepts a client-supplied amount as authoritative. Amount and currency are loaded from the locked order row.
+
+## Implementation sequence
+
+1. **Step 1 — Existing Payment Schema & Security Audit**
+   - Inspect V1 payment table, order payment states, auth principal, CSRF/callback security, permissions, configuration and test conventions.
+   - Define payment/refund state machines, idempotency keys and the exact schema gap.
+   - Decide whether a narrowly-scoped V4 migration is required. Never change V1/V2/V3.
+2. **Step 2 — Payment Domain & OOP Foundation**
+   - Add immutable/value domain types, enums, transition policies, gateway interface, provider configuration and unit tests.
+3. **Step 3 — COD Payment**
+   - Persist COD payment record and define collection/confirmation rules without marking it PAID at order placement.
+4. **Step 4 — Payment Initiation & Payment Records**
+   - Authenticated ownership checks, order row locks, amount/currency from DB, idempotent attempts and provider-session persistence.
+5. **Step 5 — SSLCommerz Sandbox**
+   - Hosted checkout initiation, IPN/callback handling and mandatory server-side Order Validation API checks.
+6. **Step 6 — bKash Sandbox**
+   - Merchant-approved sandbox credentials; server-side token/create/execute/query flow according to current official bKash docs.
+7. **Step 7 — Nagad Sandbox**
+   - Implement only against official merchant-issued sandbox documentation and credentials. Do not infer endpoints, crypto/signature algorithms or callback fields from unofficial examples.
+8. **Step 8 — Failure, Retry & Idempotency**
+   - Duplicate callbacks, replay attempts, mismatched amount/currency/order, timeouts and pending/failed/cancelled states.
+9. **Step 9 — Refund Workflow**
+   - Persist refund requests/results and audit events. Provider refund calls are sandbox-only and implemented only where the official API supports them; otherwise retain a controlled manual-review state.
+10. **Step 10 — Security, Integration Tests & CI**
+    - MySQL 8.4 integration tests, mocked provider contract tests, authorization/ownership tests, duplicate callback tests, negative verification tests and full Maven clean verify.
+11. **Step 11 — Documentation & Completion Report**
+    - API docs, environment variable template with placeholders only, sandbox test scenarios, project status and completion report.
+
+## Security and correctness rules
+
+- Never store or commit credentials, private keys, tokens, PINs, OTPs or raw authentication headers. Use environment variables and local ignored configuration.
+- Never ask the owner to paste credentials into chat. They may configure them locally through secure prompts/environment variables.
+- Do not expose provider secrets, signatures, full payloads or personal financial data in API responses/logs.
+- Callback endpoints are not trusted merely because they are reachable. Verify using the provider's server API and required signature/authentication checks.
+- Compare verified provider order/transaction reference, exact amount and currency with the persisted payment attempt and order.
+- Use database transactions and row locks around state transitions. Ensure repeated callbacks cannot create duplicate paid/refund transitions.
+- Do not downgrade PAID to FAILED because of a late failure callback. Conflicting terminal provider states require reconciliation/manual review.
+- COD is not PAID at order creation; it remains unpaid until the defined collection confirmation workflow is completed.
+- Do not fulfil or release reserved stock merely because a browser returned to a success URL.
+- Do not change Customer Website or Admin Website source files.
+- Do not merge Phase 9 PR #6 or any Phase 10 PR without explicit owner approval.
+- Preserve the isolated Phase 9 verification database and all existing Docker volumes.
+
+## Provider documentation baseline
+
+- SSLCommerz sandbox docs: https://sandbox-gw.sslcommerz.com/docs
+  - Session creation, IPN and Order Validation API are separate steps. The validation API must confirm the transaction before local payment status changes.
+- SSLCommerz v4 docs: https://developer.sslcommerz.com/doc/v4/index.html
+- bKash developer docs: https://developer.bka.sh/docs/checkout-url-process-overview
+  - Use the merchant-approved developer portal documentation for token, create, execute, query and refund operations.
+- Nagad developer portal: https://developer.nagad.com.bd
+  - Public documentation and merchant-specific sandbox access must be confirmed with Nagad. Do not implement from unofficial endpoint lists.
+
+## Completion definition
+
+Phase 10 is complete only when all required demo/sandbox flows are covered by passing automated tests and a clean-database local verification: COD lifecycle; SSLCommerz, bKash and Nagad sandbox initiation/verification; persisted payment records; correct order/payment statuses; failed/cancelled/pending handling; duplicate/replayed callback safety; and the supported refund workflow. No frontend success message alone may mark an order PAID.
+
+
+## Step 1 audit result — 18 November 2026
+
+- Confirmed the V1 `payments` table and existing `customer_orders.payment_status` constraints can be reused. Owner explicitly approved modifying the existing table. Retain and ALTER the existing `payments` table in V4; do NOT create a new/replacement `payments` table.
+- Confirmed payment providers/methods and payment statuses already have database CHECK constraints.
+- Confirmed there is no backend payment module, customer payment endpoint or refund persistence table yet.
+- Confirmed staff payment reads are already permission-gated by `PERM_payments.read`; customer ownership checks and payment-specific callback routes still need to be designed.
+- Schema gap decision: a narrow Flyway V4 is required. It will ALTER the existing `payments` table (never create a second payments table), and add separate refund/event audit tables plus a merchant idempotency field. V1/V2/V3 stay unchanged.
+- Provider documentation baseline: SSLCommerz official sandbox flow requires session initiation, IPN notification and server-side Order Validation API verification. bKash and Nagad adapters must follow the merchant-approved current official sandbox documentation; do not guess Nagad API paths, cryptographic details or callback fields.
+- No payment integration source code, credentials, live endpoint, or frontend source has been added at this audit checkpoint.
+
+
+## Owner database design clarification — 18 November 2026
+
+The owner explicitly approved changing the existing payment table. The implementation decision is therefore:
+- Keep the existing V1 `payments` table and all existing rows/foreign keys.
+- Use Flyway V4 to ALTER that same table for missing payment-attempt/idempotency metadata.
+- Add separate `payment_refunds` and `payment_events` tables for refund lifecycle and callback/event audit, with foreign keys back to the existing `payments` rows.
+- Do not create a second table named `payments`, do not drop/rename/replace the existing table, and do not edit V1/V2/V3.
+- Before committing V4, define nullable/backfill-safe columns, provider-specific unique constraints, duplicate callback handling and MySQL 8.4 integration tests. Existing payment history must remain readable.
+
+
+## Owner authorization and implementation checkpoint — 18 November 2026
+
+The owner explicitly authorized creating or modifying payment schema as needed. The selected safe design retains the original V1 `payments` table and extends it through V4; no parallel `payments` table is created.
+
+### Step 2 initial implementation committed
+
+- Added `PaymentProvider` and `PaymentStatus` enums.
+- Added an encapsulated `Payment` domain object with positive-amount/currency invariants.
+- Added `PaymentStatusTransitionPolicy` to reject invalid/terminal state changes, including PAID → FAILED.
+- Added the `PaymentGateway` abstraction with typed initiation and server-verification contracts.
+- Added initial unit tests for status transitions and domain validation.
+- Added Flyway V4 to ALTER the existing `payments` table with merchant reference, idempotency key, verification timestamp and optimistic version; added `payment_refunds` and `payment_events` audit tables.
+- V4 is committed but not yet accepted as verified: MySQL 8.4 migration execution and full Maven tests must pass before proceeding.
+- No provider adapters, COD endpoints, callbacks, refund service, live/sandbox HTTP calls or frontend changes have been implemented at this checkpoint.
+
+
+## Owner scope change — SSLCommerz deferred
+
+The owner requested that SSLCommerz work be postponed and that all other feasible Phase 10 work proceed first. SSLCommerz is therefore explicitly OUT OF CURRENT IMPLEMENTATION SCOPE and remains a later follow-up. Do not implement its adapter, callbacks or validation API in this pass.
+
+## Latest implementation checkpoint — 18 November 2026
+
+### Implemented on `phase10/payment-integration`
+
+- COD payment initiation for the authenticated customer's own eligible order, using the existing `payments` table.
+- COD stays `PENDING` until staff collection confirmation; repeat initiation with the same idempotency key returns the existing payment record.
+- Customer payment history endpoint and staff COD collection endpoint with role/permission checks.
+- Payment domain object, provider/status enums, gateway abstraction and monotonic status-transition policy. A late failure cannot downgrade a paid payment.
+- Flyway V4 extends the existing `payments` table and adds `payment_refunds` and `payment_events`.
+- Flyway V5 adds a least-privilege `payments.refund` permission for Admin/Manager.
+- Flyway V6 separates manual reconciliation references from provider-issued refund IDs.
+- Refund request, history, reconciliation and rejection endpoints. Requests enter `MANUAL_REVIEW`; payment/order status stays unchanged until staff records a reconciliation reference. Partial/full reconciliations update both payment and order statuses transactionally. Refund idempotency and remaining refundable amount checks are included.
+- COD and refund integration tests have been added. Latest commit CI must pass before these tests are accepted as verified.
+
+### CI checkpoint
+
+- Commit `ca1fed310d3716148976df7fed3c1fd90817ad15`: Backend CI and Database Migration CI passed.
+- Later refund workflow/migration/test commits have new CI runs pending at the time of this checkpoint. Do not infer their status from the earlier green run.
+
+### Explicitly not complete
+
+- SSLCommerz: deferred by owner request.
+- bKash: no provider adapter or verified sandbox callback flow has been accepted yet. The official developer documentation is not currently accessible through the available research channel; use merchant-approved official docs before coding endpoints or signature rules.
+- Nagad: no provider adapter or verified sandbox callback flow has been accepted. The official merchant sandbox API specification is required; do not guess endpoints or signature algorithms.
+- Generic gateway callback persistence and provider-side verification are not complete.
+- Gateway failure/retry/replay handling is not yet implemented end-to-end.
+- No actual provider sandbox transaction has been verified. CI mocks or local tests cannot substitute for merchant sandbox verification.
+
+### Completion gate
+
+Do not mark Phase 10 complete until all in-scope, non-deferred provider flows have documented official contracts, server-side verification, persistence, callback replay protection and passing automated tests. Since SSLCommerz is deferred, record it as a separate pending item rather than silently counting it as complete. bKash/Nagad remain blockers until official sandbox docs and approved sandbox access are available.

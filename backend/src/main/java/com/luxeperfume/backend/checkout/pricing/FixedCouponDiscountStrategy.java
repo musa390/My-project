@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 @Component
+/** [POL] Fixed-value implementation selected through CouponDiscountStrategy. */
 public final class FixedCouponDiscountStrategy extends AbstractCouponDiscountStrategy {
     @Override public boolean supports(String discountType) { return "FIXED".equals(discountType); }
 

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
+/** [ENC] Immutable money aggregate; totals are derived and cannot be externally mutated. */
 public final class MoneyBreakdown {
     private final BigDecimal subtotal;
     private final BigDecimal discountTotal;
