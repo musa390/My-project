@@ -30,6 +30,10 @@ export async function getCatalog(params: {
   });
   return data<PageResult<CatalogProduct>>(`/api/v1/catalog/products?${query.toString()}`);
 }
+export type CuratedProductRef = { id:number; name:string; slug:string; short_description?:string; is_featured?:boolean; units_sold?:number; price_min?:number|string };
+export async function getCuratedProducts(kind:"featured"|"new-arrivals"|"best-sellers"):Promise<CuratedProductRef[]> {
+  return data<CuratedProductRef[]>("/api/v1/catalog/" + kind);
+}
 export async function getProduct(slug: string): Promise<ProductDetail> {
   return data<ProductDetail>(`/api/v1/catalog/products/${encodeURIComponent(slug)}`);
 }
