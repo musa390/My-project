@@ -15,6 +15,9 @@ The Google OIDC client configuration is in application-google.yml. Activate only
 ## Newsletter
 POST /api/v1/newsletter/subscribe starts double opt-in. GET /api/v1/newsletter/confirm?token=... confirms a time-limited token. Confirmation returns a one-time unsubscribe token to the storefront; POST /api/v1/newsletter/unsubscribe consumes it.
 
+## Browser security
+CSRF protection remains enabled. Browser POST requests to contact/newsletter endpoints should first GET /api/v1/auth/csrf and send the returned token in X-XSRF-TOKEN together with the CSRF cookie.
+
 ## Contact
 POST /api/v1/contact validates and stores the message, applies a per-IP hourly limit, and creates admin in-app notifications. Optional email alert uses CONTACT_ADMIN_EMAIL. Staff can list/filter and update status through GET /api/v1/staff/contact-messages and PATCH /api/v1/staff/contact-messages/{id}/status (ADMIN/MANAGER only).
 
