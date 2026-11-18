@@ -24,6 +24,8 @@ export type CouponRecord = { id:number; code:string; description?:string; discou
 export type BannerRecord = { id:number; title:string; subtitle?:string; image_url:string; target_url?:string; placement:string; is_active:boolean; sort_order:number };
 export type StaffReview = { id:number; product_name:string; customer_email:string; rating:number; title?:string; body?:string; moderation_status:string };
 export type NewsletterSubscriber = { id:number; email:string; subscription_status:string; consented_at?:string; confirmed_at?:string; unsubscribed_at?:string; consent_source?:string };
+export type StaffUser = { id:number; email:string; first_name:string; last_name?:string; account_status:string; role_codes:string };
+export type StaffRole = { id:number; code:string; name:string; description?:string; permission_codes?:string };
 export type AnalyticsOverview = { activeProducts:number; totalOrders:number; pendingOrders:number; activeCustomers:number; paidRevenue:number|string; lowStockVariants:number; newContactMessages:number; requestedReturns:number; subscribedNewsletter:number; pendingPayments:number };
 
 export const adminApi = {
@@ -67,6 +69,10 @@ export const adminApi = {
   newsletterSubscribers: (q = "") => data<Page<NewsletterSubscriber>>("/api/v1/staff/newsletter/subscribers?q=" + encodeURIComponent(q) + "&page=0&size=100"),
   unsubscribeNewsletter: (id:number) => data<Record<string,unknown>>("/api/v1/staff/newsletter/subscribers/" + id + "/unsubscribe",{method:"POST"}),
   analytics: () => data<AnalyticsOverview>("/api/v1/staff/analytics/overview"),
+  staffUsers: () => data<StaffUser[]>("/api/v1/staff/access/users"),
+  staffRoles: () => data<StaffRole[]>("/api/v1/staff/access/roles"),
+  updateStaffRoles: (id:number,roleCodes:string[]) => data<Record<string,unknown>>("/api/v1/staff/access/users/" + id + "/roles",{method:"PATCH",body:{roleCodes}}),
+
   returns: () => data<Array<Record<string,unknown>>>("/api/v1/staff/returns"),
   decideReturn: (id:number,decision:"APPROVED"|"REJECTED",note:string) => data<Record<string,unknown>>("/api/v1/staff/returns/" + id + "/decision",{method:"PATCH",body:{decision,note}}),
   receiveReturn: (id:number,note:string) => data<Record<string,unknown>>("/api/v1/staff/returns/" + id + "/receive",{method:"POST",body:{note}}),
