@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @Component
+/** [POL] Configured flat-rate fallback strategy. */
 public final class FlatRateShippingPolicy implements ShippingPolicy {
     private final BigDecimal flatRate;
 

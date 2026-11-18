@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+/** [POL] Selects coupon and shipping implementations through their strategy contracts. */
 public class CheckoutQuoteService {
     private final List<CouponDiscountStrategy> discountStrategies;
     private final List<ShippingPolicy> shippingPolicies;
