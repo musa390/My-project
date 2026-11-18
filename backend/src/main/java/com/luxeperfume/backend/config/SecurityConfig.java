@@ -3,6 +3,7 @@ package com.luxeperfume.backend.config;
 import com.luxeperfume.backend.auth.JwtAuthenticationFilter;
 import com.luxeperfume.backend.auth.OAuth2LoginSuccessHandler;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter,
             ObjectProvider<ClientRegistrationRepository> registrations,
-            ObjectProvider<OAuth2LoginSuccessHandler> oauthSuccessHandler) throws Exception {
+            ObjectProvider<OAuth2LoginSuccessHandler> oauthSuccessHandler,
+            @Value("${app.security.oauth-success-redirect}") String oauthRedirect) throws Exception {
         boolean googleOAuthEnabled = registrations.getIfAvailable() != null;
         SessionCreationPolicy sessionPolicy = googleOAuthEnabled
                 ? SessionCreationPolicy.IF_REQUIRED : SessionCreationPolicy.STATELESS;
@@ -73,7 +75,10 @@ public class SecurityConfig {
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         if (googleOAuthEnabled) {
-            http.oauth2Login(oauth -> oauth.successHandler(oauthSuccessHandler.getIfAvailable()));
+            http.oauth2Login(oauth -> oauth
+                    .successHandler(oauthSuccessHandler.getIfAvailable())
+                    .failureHandler((request, response, exception) ->
+                            response.sendRedirect(oauthRedirect + "?error=google_auth_failed")));
         }
         return http.build();
     }
