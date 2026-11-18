@@ -2,6 +2,8 @@ package com.luxeperfume.backend.contact;
 
 import com.luxeperfume.backend.common.dto.ApiResponse;
 import com.luxeperfume.backend.integration.email.ResendEmailService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -18,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/contact")
 public class ContactController {
+    private static final Logger log=LoggerFactory.getLogger(ContactController.class);
     private final JdbcTemplate jdbc; private final ResendEmailService email; private final String adminEmail;
     public ContactController(JdbcTemplate jdbc,ResendEmailService email,@Value("${app.contact.admin-email:}") String adminEmail) {
         this.jdbc=jdbc;this.email=email;this.adminEmail=adminEmail;
@@ -40,7 +43,7 @@ public class ContactController {
         if(adminEmail!=null&&!adminEmail.isBlank()) {
             try { email.sendText(adminEmail,"New LUXE PERFUME contact message #"+id,
                     "From: "+body.name()+" <"+body.email()+">\nSubject: "+body.subject()+"\n\n"+body.message()); }
-            catch(RuntimeException ignored) { /* Persisted message remains available to staff. */ }
+            catch(RuntimeException ex) { log.error("Contact alert email could not be delivered; the message remains stored for staff."); }
         }
         return ApiResponse.success("Your message has been received.",Map.of("accepted",true,"reference",id));
     }
