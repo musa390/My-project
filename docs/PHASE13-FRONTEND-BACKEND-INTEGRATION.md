@@ -33,7 +33,7 @@
 - Category, brand and collection CRUD/deactivation.
 - Order search and status updates.
 - Customer directory and account status management (Admin-only status changes).
-- Payment search and COD collection confirmation.
+- Payment search, COD collection confirmation and manual refund-request queueing.
 - Low-stock inventory and quantity adjustment.
 - Return request queue and approve/reject decisions.
 - Contact inbox and status updates.
