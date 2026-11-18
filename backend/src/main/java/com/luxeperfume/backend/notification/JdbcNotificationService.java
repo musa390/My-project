@@ -30,8 +30,9 @@ public class JdbcNotificationService implements NotificationService {
     @Override
     @Transactional
     public void orderPlaced(long userId, long orderId) {
-        publish(userId, "order-placed:" + orderId, orderId,
+        int created = publish(userId, "order-placed:" + orderId, orderId,
                 "notification.order.placed.title", "notification.order.placed.body");
+        if (created != 1) return;
         Map<String, Object> order = jdbc.queryForMap(
                 "SELECT order_number,customer_email,currency,grand_total FROM customer_orders WHERE id=?", orderId);
         events.publishEvent(new OrderEmailEvent(orderId, (String) order.get("order_number"),
@@ -53,9 +54,9 @@ public class JdbcNotificationService implements NotificationService {
     @Override
     @Transactional
     public void orderCancelled(long userId, long orderId) {
-        publish(userId, "order-cancelled:" + orderId, orderId,
+        int created = publish(userId, "order-cancelled:" + orderId, orderId,
                 "notification.order.cancelled.title", "notification.order.cancelled.body");
-        publishStatusEmail(userId, orderId, "CANCELLED");
+        if (created == 1) publishStatusEmail(userId, orderId, "CANCELLED");
     }
 
     @Override
@@ -65,9 +66,9 @@ public class JdbcNotificationService implements NotificationService {
         if (!ORDER_STATUSES.contains(normalized)) {
             throw new IllegalArgumentException("Unsupported order notification status");
         }
-        publish(userId, "order-status:" + orderId + ":" + normalized, orderId,
+        int created = publish(userId, "order-status:" + orderId + ":" + normalized, orderId,
                 "notification.order.status.title", "notification.order.status." + normalized.toLowerCase(Locale.ROOT));
-        publishStatusEmail(userId, orderId, normalized);
+        if (created == 1) publishStatusEmail(userId, orderId, normalized);
     }
 
     private void publishStatusEmail(long userId, long orderId, String status) {
@@ -77,9 +78,9 @@ public class JdbcNotificationService implements NotificationService {
                 (String) order.get("order_number"), status));
     }
 
-    private void publish(long userId, String eventKey, long orderId, String titleKey, String messageKey) {
+    private int publish(long userId, String eventKey, long orderId, String titleKey, String messageKey) {
         if (userId <= 0 || orderId <= 0) throw new IllegalArgumentException("Notification owner and order IDs must be positive");
-        jdbc.update("""
+        return jdbc.update("""
                 INSERT IGNORE INTO user_notifications
                     (user_id,event_key,notification_type,aggregate_type,aggregate_id,title_key,message_key)
                 VALUES(?,?,'ORDER','ORDER',?,?,?)
