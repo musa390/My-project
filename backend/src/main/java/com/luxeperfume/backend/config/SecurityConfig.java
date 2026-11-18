@@ -32,10 +32,13 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter,
             ObjectProvider<ClientRegistrationRepository> registrations,
             ObjectProvider<OAuth2LoginSuccessHandler> oauthSuccessHandler) throws Exception {
+        boolean googleOAuthEnabled = registrations.getIfAvailable() != null;
+        SessionCreationPolicy sessionPolicy = googleOAuthEnabled
+                ? SessionCreationPolicy.IF_REQUIRED : SessionCreationPolicy.STATELESS;
         http
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session -> session.sessionCreationPolicy(sessionPolicy))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(
                     "/api/v1/health", "/actuator/health", "/actuator/health/**",
@@ -43,7 +46,7 @@ public class SecurityConfig {
                     "/api/v1/auth/csrf", "/api/v1/auth/register", "/api/v1/auth/login",
                     "/api/v1/auth/refresh", "/api/v1/auth/logout", "/api/v1/auth/forgot-password",
                     "/api/v1/auth/reset-password", "/oauth2/**", "/login/oauth2/**",
-                    "/api/v1/catalog/**"
+                    "/api/v1/catalog/**", "/api/v1/contact", "/api/v1/newsletter/**"
                 ).permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/staff/catalog/products/**").hasAuthority("PERM_products.write")
@@ -69,7 +72,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((request, response, exception) -> response.sendError(HttpStatus.FORBIDDEN.value())))
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-        if (registrations.getIfAvailable() != null) {
+        if (googleOAuthEnabled) {
             http.oauth2Login(oauth -> oauth.successHandler(oauthSuccessHandler.getIfAvailable()));
         }
         return http.build();
