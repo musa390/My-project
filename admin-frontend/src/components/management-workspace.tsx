@@ -5,12 +5,10 @@ import { Search, Plus, Pencil, Trash2, X, Check, RefreshCw } from "lucide-react"
 import { adminApi } from "@/lib/management";
 
 type Row = Record<string, unknown> & { id: number | string };
-type Resource = "products" | "categories" | "brands" | "collections" | "orders" | "inventory" | "contacts" | "returns";
+type Resource = "products" | "categories" | "brands" | "collections" | "orders" | "customers" | "payments" | "inventory" | "contacts" | "returns";
 const titles:Record<string,string>={products:"Products",categories:"Categories",brands:"Brands",collections:"Collections",orders:"Orders",inventory:"Inventory","contact-messages":"Contact Messages",returns:"Return Requests"};
 const aliases:Record<string,string>={"contact-messages":"contacts","returns":"returns"};
 const unsupported:Record<string,string>={
- customers:"The backend does not yet expose a staff customer-directory endpoint.",
- payments:"The backend currently exposes COD collection and refund actions, but no staff payment-list endpoint.",
  coupons:"Coupon validation exists in checkout, but staff coupon CRUD endpoints are not available yet.",
  reviews:"Review moderation endpoints are not available in the current backend.",
  banners:"Banner management endpoints are not available in the current backend.",
@@ -23,7 +21,7 @@ const unsupported:Record<string,string>={
 export function ManagementWorkspace({section}:{section:string}) {
  const key=aliases[section]||section;
  const resource=key as Resource;
- const supported=["products","categories","brands","collections","orders","inventory","contacts","returns"].includes(resource);
+ const supported=["products","categories","brands","collections","orders","customers","payments","inventory","contacts","returns"].includes(resource);
  const [rows,setRows]=useState<Row[]>([]);
  const [query,setQuery]=useState("");
  const [loading,setLoading]=useState(true);
@@ -45,6 +43,8 @@ export function ManagementWorkspace({section}:{section:string}) {
    if(resource==="brands")result=await adminApi.brands();
    if(resource==="collections")result=await adminApi.collections();
    if(resource==="orders")result=(await adminApi.orders(query)).items;
+   if(resource==="customers")result=(await adminApi.customers(query)).items;
+   if(resource==="payments")result=(await adminApi.payments(query)).items;
    if(resource==="inventory")result=await adminApi.lowStock();
    if(resource==="contacts")result=(await adminApi.contacts()).items;
    if(resource==="returns")result=await adminApi.returns();
@@ -117,6 +117,18 @@ export function ManagementWorkspace({section}:{section:string}) {
   try{await adminApi.updateProduct(Number(row.id),{status:"ACTIVE"});setNotice("Product published to the live catalogue.");await load();}
   catch(reason){setError(reason instanceof Error?reason.message:"Product cannot be published until its required variant is configured.");}
  }
+ async function updateCustomer(row:Row,status:string){
+  try{await adminApi.updateCustomerStatus(Number(row.id),status);setNotice("Customer account status saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Customer status update failed. This action may require Admin permission.");}
+ }
+ async function confirmPayment(row:Row){
+  try{await adminApi.confirmCodPayment(Number(row.payment_id||row.id));setNotice("COD collection confirmation saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"COD collection could not be confirmed.");}
+ }
+ async function decideReturn(row:Row,decision:"APPROVED"|"REJECTED"){
+  try{await adminApi.decideReturn(Number(row.id),decision,"Reviewed from Admin Website");setNotice("Return request decision saved.");await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Return decision could not be saved.");}
+ }
  async function updateContact(row:Row,status:string){
   try{await adminApi.updateContactStatus(Number(row.id),status);setNotice("Contact message status saved.");await load();}
   catch(reason){setError(reason instanceof Error?reason.message:"Contact update failed.");}
@@ -143,11 +155,11 @@ export function ManagementWorkspace({section}:{section:string}) {
   <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]"><div className="flex flex-col gap-3 border-b border-[var(--line)] p-4 sm:flex-row sm:items-center sm:justify-between"><label className="flex-1 text-xs text-[var(--muted)]"><span className="sr-only">Search records</span><div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[#100f0d] px-3"><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={"Search "+title.toLowerCase()+"…"} className="w-full bg-transparent py-2.5 text-sm text-white outline-none"/></div></label><span className="text-xs text-[var(--muted)]">{filtered.length} loaded record(s)</span></div>
   {loading?<div className="px-6 py-16 text-center text-sm text-[var(--muted)]">Loading live records…</div>:filtered.length===0?<div className="px-6 py-16 text-center"><p className="font-medium">No live records found</p><p className="mt-2 text-sm text-[var(--muted)]">Try refreshing or changing the search.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-[#201d18] text-xs uppercase tracking-wider text-[var(--muted)]"><tr><th className="px-5 py-3">Record</th><th className="px-5 py-3">Details</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Value</th><th className="px-5 py-3">Actions</th></tr></thead><tbody>{filtered.map((row,index)=>{
    const id=String(row.id??row.variant_id??index);
-   const name=String(row.name??row.product_name??row.orderNumber??row.full_name??row.variant_name??row.subject??"Record");
+   const name=String(row.name??row.product_name??row.orderNumber??row.full_name??((row.first_name||row.last_name)?String(row.first_name||"")+" "+String(row.last_name||""):"")??row.variant_name??row.subject??"Record");
    const detail=String(row.slug??row.category_name??row.brand_name??row.customerEmail??row.email??row.sku??row.order_number??"");
-   const status=String(row.status??row.orderStatus??row.order_status??row.paymentStatus??row.payment_status??"ACTIVE");
-   const value=String(row.price_min??row.grandTotal??row.grand_total??row.available_quantity??row.quantity_on_hand??row.message??"—");
-   return <tr key={id} className="border-t border-[var(--line)] hover:bg-white/[.02]"><td className="px-5 py-4"><div className="font-medium">{name}</div><div className="mt-1 text-[10px] text-[var(--muted)]">#{id}</div></td><td className="max-w-[280px] truncate px-5 py-4 text-[#c9c0b3]">{detail}</td><td className="px-5 py-4">{resource==="orders"?<select value={status} onChange={e=>void updateOrder(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white"><option value={status}>{status}</option>{["CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED"].filter(s=>s!==status).map(s=><option key={s}>{s}</option>)}</select>:resource==="contacts"?<select value={status} onChange={e=>void updateContact(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white">{["NEW","IN_PROGRESS","RESOLVED","SPAM"].map(s=><option key={s}>{s}</option>)}</select>:status}</td><td className="max-w-[240px] truncate px-5 py-4 text-[#e1d5c2]">{value}</td><td className="px-5 py-4"><div className="flex items-center gap-2">{["products","categories","brands","collections"].includes(resource)&&<><button title="Edit" aria-label={"Edit "+name} onClick={()=>startEdit(row)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-white"><Pencil size={14}/></button><button title="Archive" aria-label={"Archive "+name} onClick={()=>void archive(row)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-red-300"><Trash2 size={14}/></button>{resource==="products"&&status==="DRAFT"&&<button title="Publish" onClick={()=>void publishProduct(row)} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">PUBLISH</button>}</>}</div></td></tr>;
+   const status=String(row.status??row.orderStatus??row.order_status??row.returnStatus??row.account_status??row.paymentStatus??row.payment_status??"ACTIVE");
+   const value=String(row.price_min??row.grandTotal??row.grand_total??row.amount??row.lifetime_value??row.available_quantity??row.quantity_on_hand??row.message??"—");
+   return <tr key={id} className="border-t border-[var(--line)] hover:bg-white/[.02]"><td className="px-5 py-4"><div className="font-medium">{name}</div><div className="mt-1 text-[10px] text-[var(--muted)]">#{id}</div></td><td className="max-w-[280px] truncate px-5 py-4 text-[#c9c0b3]">{detail}</td><td className="px-5 py-4">{resource==="orders"?<select value={status} onChange={e=>void updateOrder(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white"><option value={status}>{status}</option>{["CONFIRMED","PROCESSING","SHIPPED","DELIVERED","CANCELLED"].filter(s=>s!==status).map(s=><option key={s}>{s}</option>)}</select>:resource==="contacts"?<select value={status} onChange={e=>void updateContact(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white">{["NEW","IN_PROGRESS","RESOLVED","SPAM"].map(s=><option key={s}>{s}</option>)}</select>:resource==="customers"?<select value={status} onChange={e=>void updateCustomer(row,e.target.value)} className="rounded-lg border border-[var(--line)] bg-[#100f0d] px-2 py-1.5 text-xs text-white">{["ACTIVE","SUSPENDED"].map(s=><option key={s}>{s}</option>)}</select>:status}</td><td className="max-w-[240px] truncate px-5 py-4 text-[#e1d5c2]">{value}</td><td className="px-5 py-4"><div className="flex items-center gap-2">{["products","categories","brands","collections"].includes(resource)&&<><button title="Edit" aria-label={"Edit "+name} onClick={()=>startEdit(row)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-white"><Pencil size={14}/></button><button title="Archive" aria-label={"Archive "+name} onClick={()=>void archive(row)} className="rounded-md border border-[var(--line)] p-2 text-[var(--muted)] hover:text-red-300"><Trash2 size={14}/></button>{resource==="products"&&status==="DRAFT"&&<button title="Publish" onClick={()=>void publishProduct(row)} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">PUBLISH</button>}</>}{resource==="payments"&&String(row.payment_method)==="CASH_ON_DELIVERY"&&status!=="PAID"&&<button onClick={()=>void confirmPayment(row)} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">CONFIRM COD</button>}{resource==="returns"&&status==="REQUESTED"&&<><button onClick={()=>void decideReturn(row,"APPROVED")} className="rounded-md border border-[#655333] px-2 py-1 text-xs text-[var(--gold)]">APPROVE</button><button onClick={()=>void decideReturn(row,"REJECTED")} className="rounded-md border border-[var(--line)] px-2 py-1 text-xs text-red-300">REJECT</button></>}</div></td></tr>;
   })}</tbody></table></div>}
   <div className="flex items-center justify-between border-t border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)]"><span>Source: LUXE backend REST API</span><span>Server is authoritative</span></div></section>
  </div>;
