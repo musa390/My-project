@@ -2,7 +2,7 @@ name: Backend Foundation and Catalog CI
 
 on:
   push:
-    branches: [main, "phase5/**", "phase6/**", "phase7/**", "phase8/**", "phase9/**", "phase10/**", "phase11/**"]
+    branches: [main, "phase5/**", "phase6/**", "phase7/**", "phase8/**", "phase9/**", "phase10/**", "phase11/**", "phase12/**"]
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
@@ -12,6 +12,7 @@ on:
       - "docs/PHASE9-CHECKOUT-ORDER-MANAGEMENT-*.md"
       - "docs/PHASE10-PAYMENT-INTEGRATION-*.md"
       - "docs/PHASE11-ADVANCED-BUSINESS-LOGIC-*.md"
+      - "docs/PHASE12-*.md"
       - "docs/PROJECT_STATUS.md"
   pull_request:
     paths:
