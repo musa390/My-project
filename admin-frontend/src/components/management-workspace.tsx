@@ -59,7 +59,7 @@ export function ManagementWorkspace({section}:{section:string}) {
  useEffect(()=>{void load();},[load]);
  const filtered=useMemo(()=>rows.filter(row=>Object.values(row).join(" ").toLowerCase().includes(query.toLowerCase())),[rows,query]);
 
- function resetForm(){setProductImages([]);setDraft({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0",roleCodes:""});setEditing(null);setFormOpen(false);}
+ function resetForm(){setProductImages([]);setDraft({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0",roleCodes:"",altText:"",primaryImage:"true"});setEditing(null);setFormOpen(false);}
  function startEdit(row:Row){
   setEditing(Number(row.id));
   if(resource==="products"){setProductImages([]);adminApi.productImages(Number(row.id)).then(setProductImages).catch(reason=>setError(reason instanceof Error?reason.message:"Could not load product images."));}
