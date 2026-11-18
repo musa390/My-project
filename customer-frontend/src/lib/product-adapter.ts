@@ -13,7 +13,9 @@ function variantsFrom(value: unknown): VariantLike[] {
 function volumeOf(variant: VariantLike): "30ml"|"50ml"|"100ml"|null {
   const name=String(variant.variantName||variant.variant_name||"").toLowerCase();
   const match=name.match(/(30|50|100)\s*ml/);
-  return match ? (match[1]+"ml") as "30ml"|"50ml"|"100ml" : null;
+  const volume=Number(variant.volume_ml);
+  const normalized=match?.[1] || ([30,50,100].includes(volume) ? String(volume) : null);
+  return normalized ? (normalized+"ml") as "30ml"|"50ml"|"100ml" : null;
 }
 export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0): Product {
   const detail=record as ProductDetail;
