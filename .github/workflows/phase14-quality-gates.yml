@@ -74,6 +74,8 @@ jobs:
           cache: npm
           cache-dependency-path: customer-frontend/package-lock.json
       - run: npm install --no-audit --no-fund
+      - name: Apply non-breaking dependency security updates
+        run: npm audit fix || echo "Unfixed advisories will be recorded in the full audit report."
       - name: Install ephemeral browser runner
         run: npm install --no-save --package-lock=false playwright
       - run: npx playwright install --with-deps chromium
@@ -119,6 +121,8 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
+      - name: Apply non-breaking dependency security updates
+        run: npm audit fix || echo "Unfixed advisories will be recorded in the full audit report."
       - name: Install ephemeral browser runner
         run: npm install --no-save --package-lock=false playwright
       - run: npx playwright install --with-deps chromium
