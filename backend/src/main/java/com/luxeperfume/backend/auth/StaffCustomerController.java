@@ -80,10 +80,13 @@ public class StaffCustomerController {
             @RequestBody StatusRequest request) {
         long actorId=actorId(authentication);
         if(actorId==customerId)throw new ResponseStatusException(HttpStatus.CONFLICT,"You cannot change your own account status here");
-        int changed=jdbc.update("UPDATE users SET account_status=? WHERE id=? AND deleted_at IS NULL",
-                request.status().toUpperCase(),customerId);
-        if(changed==0)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Customer not found or status unchanged");
-        return ApiResponse.success("Customer status updated",Map.of("id",customerId,"status",request.status().toUpperCase()));
+        List<Map<String,Object>> existing=jdbc.queryForList(
+                "SELECT account_status FROM users WHERE id=? AND deleted_at IS NULL",customerId);
+        if(existing.isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Customer not found");
+        String target=request.status().toUpperCase();
+        String current=String.valueOf(existing.getFirst().get("account_status"));
+        if(!current.equals(target))jdbc.update("UPDATE users SET account_status=? WHERE id=? AND deleted_at IS NULL",target,customerId);
+        return ApiResponse.success("Customer status updated",Map.of("id",customerId,"status",target));
     }
 
     private static long actorId(Authentication authentication){
