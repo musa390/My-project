@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Search, Plus, Pencil, Trash2, X, Check, RefreshCw } from "lucide-react";
-import { adminApi, type CatalogRecord, type TaxonomyRecord, type StaffOrder, type InventoryRecord, type ContactMessage } from "@/lib/management";
+import { adminApi } from "@/lib/management";
 
 type Row = Record<string, unknown> & { id: number | string };
 type Resource = "products" | "categories" | "brands" | "collections" | "orders" | "inventory" | "contacts" | "returns";
