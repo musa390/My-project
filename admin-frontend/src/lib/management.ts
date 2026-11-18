@@ -18,6 +18,8 @@ export type StaffOrder = {
 };
 export type InventoryRecord = { variantId?: number; variant_id?: number; productName?: string; product_name?: string; variantName?: string; variant_name?: string; quantityOnHand?: number; quantity_on_hand?: number; quantityReserved?: number; quantity_reserved?: number; reorderLevel?: number; reorder_level?: number };
 export type ContactMessage = { id: number; full_name: string; email: string; subject: string; message: string; status: string; created_at: string };
+export type StaffCustomer = { id:number; email:string; first_name:string; last_name?:string; phone?:string; account_status:string; order_count:number; lifetime_value:number|string };
+export type StaffPayment = { payment_id:number; order_number:string; customer_email:string; provider:string; payment_method:string; amount:number|string; currency:string; payment_status:string };
 
 export const adminApi = {
   products: (q = "") => data<Page<CatalogRecord>>("/api/v1/staff/catalog/products?q=" + encodeURIComponent(q) + "&page=0&size=100"),
@@ -37,6 +39,10 @@ export const adminApi = {
   createCollection: (body:Record<string,unknown>) => data<TaxonomyRecord>("/api/v1/staff/catalog/collections",{method:"POST",body}),
   updateCollection: (id:number,body:Record<string,unknown>) => data<TaxonomyRecord>("/api/v1/staff/catalog/collections/" + id,{method:"PUT",body}),
   archiveCollection: (id:number) => data<TaxonomyRecord>("/api/v1/staff/catalog/collections/" + id,{method:"DELETE"}),
+  customers: (q = "") => data<Page<StaffCustomer>>("/api/v1/staff/customers?q=" + encodeURIComponent(q) + "&page=0&size=100"),
+  updateCustomerStatus: (id:number,status:string) => data<Record<string,unknown>>("/api/v1/staff/customers/" + id + "/status",{method:"PATCH",body:{status}}),
+  payments: (q = "") => data<Page<StaffPayment>>("/api/v1/staff/payments?q=" + encodeURIComponent(q) + "&page=0&size=100"),
+  confirmCodPayment: (paymentId:number) => data<Record<string,unknown>>("/api/v1/staff/payments/" + paymentId + "/cod-collection",{method:"POST"}),
   orders: (q = "") => data<Page<StaffOrder>>("/api/v1/staff/orders?q=" + encodeURIComponent(q) + "&page=0&size=100"),
   updateOrderStatus: (orderNumber:string,status:string,note?:string) => data<Record<string,unknown>>("/api/v1/staff/orders/" + encodeURIComponent(orderNumber) + "/status",{method:"PATCH",body:{status,note}}),
   lowStock: () => data<InventoryRecord[]>("/api/v1/staff/inventory/low-stock"),
@@ -44,4 +50,6 @@ export const adminApi = {
   contacts: (status?:string) => data<{items:ContactMessage[];page:number;size:number}>("/api/v1/staff/contact-messages?page=0&size=100" + (status ? "&status=" + encodeURIComponent(status) : "")),
   updateContactStatus: (id:number,status:string) => data<Record<string,unknown>>("/api/v1/staff/contact-messages/" + id + "/status",{method:"PATCH",body:{status}}),
   returns: () => data<Array<Record<string,unknown>>>("/api/v1/staff/returns"),
+  decideReturn: (id:number,decision:"APPROVED"|"REJECTED",note:string) => data<Record<string,unknown>>("/api/v1/staff/returns/" + id + "/decision",{method:"PATCH",body:{decision,note}}),
+  receiveReturn: (id:number,note:string) => data<Record<string,unknown>>("/api/v1/staff/returns/" + id + "/receive",{method:"POST",body:{note}}),
 };
