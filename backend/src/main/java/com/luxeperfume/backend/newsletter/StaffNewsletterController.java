@@ -30,7 +30,7 @@ public class StaffNewsletterController {
         Integer count=jdbc.queryForObject("SELECT COUNT(*) FROM newsletter_subscribers"+where,Integer.class,args.toArray());
         List<Object> pageArgs=new ArrayList<>(args);pageArgs.add(safeSize);pageArgs.add((long)safePage*safeSize);
         List<Map<String,Object>> items=jdbc.queryForList("""
-                SELECT id,email,subscription_status,consented_at,confirmed_at,unsubscribed_at,source,created_at,updated_at
+                SELECT id,email,subscription_status,consented_at,confirmed_at,unsubscribed_at,consent_source,created_at,updated_at
                 FROM newsletter_subscribers
                 """+where+" ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",pageArgs.toArray());
         long total=count==null?0:count;Map<String,Object> result=new LinkedHashMap<>();
