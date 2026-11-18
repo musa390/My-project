@@ -192,3 +192,39 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
+
+  sync-dependency-lockfiles:
+    name: Commit audited frontend lockfiles
+    needs: [customer-frontend, admin-frontend]
+    if: github.event_name == 'push' && needs.customer-frontend.result == 'success' && needs.admin-frontend.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Download customer dependency audit artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: phase14-customer-dependency-audit
+          path: /tmp/customer-dependencies
+      - name: Download admin dependency audit artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: phase14-admin-dependency-audit
+          path: /tmp/admin-dependencies
+      - name: Commit generated lockfiles
+        shell: bash
+        run: |
+          cp /tmp/customer-dependencies/package-lock.json customer-frontend/package-lock.json
+          cp /tmp/admin-dependencies/package-lock.json admin-frontend/package-lock.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer-frontend/package-lock.json admin-frontend/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Frontend lockfiles are already current."
+          else
+            git commit -m "chore(deps): refresh audited frontend lockfiles"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi
