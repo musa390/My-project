@@ -1,0 +1,271 @@
+name: Phase 14 Quality Gates
+
+on:
+  push:
+    branches: ["phase14/**"]
+  pull_request:
+    branches: ["phase13/frontend-backend-integration"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase14-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests + MySQL migrations
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_password
+          MYSQL_DATABASE: luxe_perfume
+          MYSQL_USER: luxe_app
+          MYSQL_PASSWORD: ci_app_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_root_password --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: luxe_perfume
+      MYSQL_USER: luxe_app
+      MYSQL_PASSWORD: ci_app_password
+      BACKEND_PORT: 8080
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Run full backend verification
+        working-directory: backend
+        run: mvn --batch-mode --no-transfer-progress clean verify
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase14-backend-surefire-reports
+          path: backend/target/surefire-reports/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Run backend API latency smoke
+        working-directory: backend
+        shell: bash
+        run: |
+          java -jar target/luxe-perfume-backend-0.1.0-SNAPSHOT.jar > /tmp/luxe-backend.log 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$backend_pid" 2>/dev/null; then
+              cat /tmp/luxe-backend.log
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/luxe-backend.log
+            exit 1
+          fi
+          node ../scripts/phase14-api-performance-smoke.mjs
+
+  customer-frontend:
+    name: Customer frontend + Chromium responsive smoke
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: customer-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: customer-frontend/package-lock.json
+      - run: npm install --no-audit --no-fund
+      - name: Apply non-breaking dependency security updates
+        run: npm audit fix || echo "Unfixed advisories will be recorded in the full audit report."
+      - name: Install ephemeral browser runner
+        run: npm install --no-save --package-lock=false playwright
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:phase6
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Audit production dependency tree (blocking)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Capture complete dependency audit (including development tooling)
+        run: npm audit --json > phase14-npm-audit.json || true
+      - name: Upload dependency lockfile and audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase14-customer-dependency-audit
+          path: |
+            customer-frontend/package-lock.json
+            customer-frontend/phase14-npm-audit.json
+          retention-days: 14
+      - run: npm run build
+      - name: Run customer Chromium route and responsive QA
+        shell: bash
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/luxe-customer.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          for attempt in {1..40}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3000/ >/dev/null
+          node scripts/phase14-browser-smoke.mjs
+
+  admin-frontend:
+    name: Admin frontend + Chromium responsive smoke
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - name: Apply non-breaking dependency security updates
+        run: npm audit fix || echo "Unfixed advisories will be recorded in the full audit report."
+      - name: Install ephemeral browser runner
+        run: npm install --no-save --package-lock=false playwright
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:phase3
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Audit production dependency tree (blocking)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Capture complete dependency audit (including development tooling)
+        run: npm audit --json > phase14-npm-audit.json || true
+      - name: Upload dependency lockfile and audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase14-admin-dependency-audit
+          path: |
+            admin-frontend/package-lock.json
+            admin-frontend/phase14-npm-audit.json
+          retention-days: 14
+      - run: npm run build
+      - name: Run admin Chromium route and responsive QA
+        shell: bash
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/luxe-admin.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          for attempt in {1..40}; do
+            if curl -fsS http://127.0.0.1:3001/login >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3001/login >/dev/null
+          node scripts/phase14-browser-smoke.mjs
+
+  backend-dependency-inventory:
+    name: Maven dependency inventory
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Resolve and inventory Maven dependencies
+        working-directory: backend
+        run: mvn --batch-mode --no-transfer-progress org.apache.maven.plugins:maven-dependency-plugin:3.8.1:tree
+
+  codeql:
+    name: CodeQL static security analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build_mode: autobuild
+          - language: javascript-typescript
+            build_mode: none
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build_mode }}
+      - name: Analyze source
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  osv-dependency-scan:
+    name: OSV dependency vulnerability scan
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.1
+    with:
+      scan-args: |-
+        --recursive
+        ./
+      fail-on-vuln: false
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+
+  sync-dependency-lockfiles:
+    name: Commit audited frontend lockfiles
+    needs: [customer-frontend, admin-frontend]
+    if: github.event_name == 'push' && needs.customer-frontend.result == 'success' && needs.admin-frontend.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Download customer dependency audit artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: phase14-customer-dependency-audit
+          path: /tmp/customer-dependencies
+      - name: Download admin dependency audit artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: phase14-admin-dependency-audit
+          path: /tmp/admin-dependencies
+      - name: Commit generated lockfiles
+        shell: bash
+        run: |
+          cp /tmp/customer-dependencies/package-lock.json customer-frontend/package-lock.json
+          cp /tmp/admin-dependencies/package-lock.json admin-frontend/package-lock.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add customer-frontend/package-lock.json admin-frontend/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Frontend lockfiles are already current."
+          else
+            git commit -m "chore(deps): refresh audited frontend lockfiles"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi
