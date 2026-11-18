@@ -7,7 +7,7 @@ This deployment is intentionally isolated from production. It uses the Phase 14 
 - Customer frontend: Vercel project rooted at `customer-frontend`.
 - Admin frontend: separate Vercel project rooted at `admin-frontend`.
 - Backend: Render Blueprint service from `render.yaml`, using `backend/Dockerfile`.
-- Database: separate TiDB Cloud Starter cluster (MySQL protocol compatible), database/schema `luxe_perfume_staging`.
+- Database: separate TiDB Cloud Starter cluster (MySQL protocol compatible), database/schema `luxe_perfume` (the schema already created for this staging environment).
 
 TiDB is MySQL-compatible, not the same server product/version as MySQL 8.4. Treat migration compatibility as unverified until the staging Flyway migrations and application integration checks pass. Do not use the staging database for production.
 
@@ -20,15 +20,15 @@ TiDB is MySQL-compatible, not the same server product/version as MySQL 8.4. Trea
 
 ## 1. TiDB Cloud Starter
 
-Create a Starter cluster and a dedicated database/schema named `luxe_perfume_staging`. Keep the free-tier spending controls at zero/disabled for paid overages where the provider offers that setting. Confirm the cluster region, network access policy, TLS requirement, and current free quota before creating it.
+Use the existing Starter cluster in Singapore and its database/schema named `luxe_perfume`. Keep the free-tier spending controls at zero/disabled for paid overages where the provider offers that setting. Keep the free-tier spending controls at zero/disabled for paid overages where the provider offers that setting. Confirm the cluster region, network access policy, TLS requirement, and current free quota before creating it.
 
 Create a database user limited to this staging schema. Require TLS. Copy the JDBC connection details into a secure password manager temporarily; do not paste them into chat or commit them.
 
-The JDBC URL must use the provider's documented MySQL Connector/J TLS settings and the cluster's actual host/port/database. Do not guess TLS flags or disable certificate verification. Confirm the TiDB certificate/CA instructions for Java Connector/J before first connection.
+Use the cluster's actual host, port `4000`, and database `luxe_perfume`. TiDB Cloud Starter uses Let's Encrypt certificates; Java clients that use the standard JVM root trust store can validate these certificates without a separately supplied CA file. Configure MySQL Connector/J with certificate and hostname verification (for example, `sslMode=VERIFY_IDENTITY`); never disable certificate verification. The downloaded certificate should not be committed to GitHub. Confirm the final JDBC URL against TiDB's current Java connection guidance before deploying.
 
 ## 2. Render backend
 
-In Render Dashboard, create a Blueprint from this repository and select branch `phase14/staging-deployment-setup`. Review `render.yaml` before applying. The service is configured as a free Docker web service with automatic deploy disabled; free instances may sleep and are not production-grade.
+In Render Dashboard, create a Blueprint from this repository and select branch `phase14/staging-deployment-setup`. The Blueprint pins the backend to Singapore to keep it near the TiDB cluster. Review `render.yaml` before applying. The service is configured as a free Docker web service with automatic deploy disabled; free instances may sleep and are not production-grade.
 
 Set these secrets/values in the Render service environment:
 - `DATABASE_URL`: JDBC URL supplied by TiDB, including the documented TLS verification options.
