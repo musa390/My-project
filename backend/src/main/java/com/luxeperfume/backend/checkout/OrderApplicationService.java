@@ -4,6 +4,7 @@ import com.luxeperfume.backend.checkout.domain.CheckoutLine;
 import com.luxeperfume.backend.checkout.domain.Coupon;
 import com.luxeperfume.backend.checkout.domain.OrderNumberGenerator;
 import com.luxeperfume.backend.inventory.domain.InventoryQuantity;
+import com.luxeperfume.backend.notification.NotificationService;
 import com.luxeperfume.backend.checkout.dto.OrderPlacementRequest;
 import com.luxeperfume.backend.checkout.dto.OrderPlacementResponse;
 import com.luxeperfume.backend.checkout.inventory.InventoryReservationService;
