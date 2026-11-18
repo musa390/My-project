@@ -65,7 +65,7 @@
 ## Phase 11 — Advanced Business Logic & OOP
 - Working branch: `phase11/advanced-business-logic-oop`; draft PR #8: https://github.com/musa390/My-project/pull/8.
 - Implementation includes immutable inventory rules, product publication policy, discount and shipping strategies, notification inbox, return request/review/receipt workflow, refund amount policy and additive V7/V8 migrations.
-- Backend and Database Migration CI verification is pending for the implementation commit; owner-local Windows clean-database verification is also pending. Do not mark Phase 11 100% until these gates pass.
+- Backend CI PASS: https://github.com/musa390/My-project/actions/runs/44231050193. Database Migration CI PASS: https://github.com/musa390/My-project/actions/runs/44231049804. Verified commit `605b859f705134924b9b545c934b48d79af34965`; Java 21 + MySQL 8.4; Maven `clean verify`: 72 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS. Database CI applied V1–V8 and verified the new tables. Owner-local Windows clean-database verification remains pending; do not claim absolute 100% until that final check passes.
 - SSLCommerz is not included. bKash/Nagad provider work remains a separate Phase 10 blocker.
 
 ## Roadmap
@@ -82,7 +82,7 @@
 | 8 | Cart, Wishlist & Inventory | In progress; final review/local verification pending |
 | 9 | Checkout & Order Management | **GitHub-side complete; owner-local clean DB verification pending** |
 | 10 | Payment Integration | IN PROGRESS — bKash/Nagad sandbox work pending; SSLCommerz deferred |
-| 11 | Advanced Business Logic & OOP | Implementation committed; CI and owner-local verification pending |
+| 11 | Advanced Business Logic & OOP | Implementation + GitHub CI complete; owner-local Windows verification pending |
 | 12 | Additional Integrations | Pending |
 | 13 | Frontend & Backend Integration | Pending |
 | 14 | Testing, Security & QA | Pending |

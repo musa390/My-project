@@ -4,7 +4,7 @@
 - Phases 0–4: Complete as recorded in `docs/PROJECT_STATUS.md`.
 - Phases 5–9: See `docs/PROJECT_STATUS.md` for the exact CI and owner-local verification gates.
 - Phase 10: IN PROGRESS. COD and manual refund foundation are verified at the previous CI checkpoint; bKash/Nagad sandbox integration remains blocked on official merchant specifications and sandbox acceptance. SSLCommerz is deferred until the final payment phase.
-- **Current: Phase 11 — Advanced Business Logic & OOP implementation committed on `phase11/advanced-business-logic-oop`; draft PR #8 is open. Backend CI, Database Migration CI and owner-local clean-database verification are pending.**
+- **Current: Phase 11 — Advanced Business Logic & OOP implementation and GitHub CI are complete on `phase11/advanced-business-logic-oop`; draft PR #8 is open. Backend CI passed with 72 tests (0 failures/errors/skips), and Database Migration CI passed V1–V8. Owner-local Windows clean-database verification remains pending before 100% completion.**
 
 ## Sources of truth
 - docs/PROJECT_MASTER_PLAN.md

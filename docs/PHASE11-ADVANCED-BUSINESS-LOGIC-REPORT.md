@@ -1,6 +1,6 @@
 # Phase 11 — Advanced Business Logic & OOP Report
 
-Report status: IMPLEMENTATION COMMITTED — CI verification pending
+Report status: IMPLEMENTATION + GITHUB CI PASS — owner-local Windows verification pending
 Branch: `phase11/advanced-business-logic-oop`
 Draft PR: https://github.com/musa390/My-project/pull/8
 Base: `phase10/payment-integration`
@@ -78,12 +78,19 @@ Phase 10 remains IN PROGRESS independently. SSLCommerz is not part of Phase 11 a
 
 Exact test totals and final acceptance status will be recorded only after GitHub Actions completes on the implementation commit.
 
-## Remaining verification
+## Verification results
 
-1. Backend CI: Java 21, MySQL 8.4, Maven `clean verify`.
-2. Database Migration CI: apply V1–V8 on a clean MySQL 8.4 service and verify Phase 10/11 tables.
-3. Inspect all workflow results and resolve any failures.
-4. Owner-local Windows clean-database verification.
-5. Final review of API compatibility, permission boundaries and migration safety.
+- Backend CI PASS: https://github.com/musa390/My-project/actions/runs/44231050193
+- Database Migration CI PASS: https://github.com/musa390/My-project/actions/runs/44231049804
+- Verified commit: `605b859f705134924b9b545c934b48d79af34965`
+- Java 21 + MySQL 8.4; Maven `clean verify`: **72 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**.
+- Database Migration CI applied V1–V8 on a clean MySQL 8.4 service and verified payment, notification and return tables.
+- No Customer Website or Admin Website source files were changed.
+
+## Remaining final gate
+
+1. Owner-local Windows clean-database verification on the Phase 11 branch.
+2. Owner review of the new return policy and API behavior.
+3. Keep PR #8 draft/unmerged until owner approval; do not merge without explicit approval.
 
 PR #8 remains draft and unmerged. No merge is performed without explicit approval.

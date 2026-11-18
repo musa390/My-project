@@ -17,7 +17,7 @@ Build a full-stack perfume e-commerce platform while preserving the existing Cus
 | 8 | Cart, wishlist and inventory | Pending |
 | 9 | Checkout and order management | Pending |
 | 10 | Sandbox payment integrations and COD | IN PROGRESS — COD/refund foundation done; bKash/Nagad sandbox pending; SSLCommerz deferred |
-| 11 | Domain/business logic and Java OOP | Implementation committed; CI and owner-local verification pending |
+| 11 | Domain/business logic and Java OOP | Implementation + GitHub CI complete; owner-local Windows verification pending |
 | 12 | Approved third-party integrations | Pending |
 | 13 | Frontend/backend integration | Pending; approval required before modifying protected Customer Website source |
 | 14 | Testing, security and QA | Pending |
@@ -35,7 +35,7 @@ A normalized MySQL 8.4 schema, ERD, 30-table V1 migration, V2 demo seed migratio
 ## Phase 5 foundation
 Working branch: phase5/backend-foundation. Java 21, Spring Boot 4.1.2, Maven, MySQL/Flyway configuration, shared API response/error handling, reusable BaseRepository/CrudService foundation, health endpoint, CORS, OpenAPI/Swagger and integration tests are implemented. Backend CI run 44109910795 passed on code commit f252915e050cd0a9e1f7434f21d7e98fc0973b04, including four integration tests against MySQL 8.4. The schema uses VIRTUAL generated columns where cascading foreign keys require them for MySQL 8.4 compatibility. Local MySQL connectivity, local Maven verification and endpoint checks remain owner-confirmation gates. See docs/PHASE5-BACKEND-FOUNDATION-PLAN.md.
 
-## Phase 10/11 implementation boundary\n- Phase 10 remains IN PROGRESS until bKash/Nagad official sandbox adapters, callbacks, server-side verification and sandbox acceptance are complete. SSLCommerz is deferred until the final payment phase.\n- Phase 11 is developed on `phase11/advanced-business-logic-oop` with draft PR #8. It adds inventory/product invariants, discount/shipping strategies, in-app notifications, full-order return review/receipt, refund amount policy and V7/V8 migrations. CI and owner-local verification are still required before 100% completion.\n\n## Core architecture
+## Phase 10/11 implementation boundary\n- Phase 10 remains IN PROGRESS until bKash/Nagad official sandbox adapters, callbacks, server-side verification and sandbox acceptance are complete. SSLCommerz is deferred until the final payment phase.\n- Phase 11 is developed on `phase11/advanced-business-logic-oop` with draft PR #8. It adds inventory/product invariants, discount/shipping strategies, in-app notifications, full-order return review/receipt, refund amount policy and V7/V8 migrations. GitHub CI passed on commit `605b859f705134924b9b545c934b48d79af34965` (72 tests, 0 failures/errors/skips; V1–V8 migration CI passed). Owner-local Windows clean-database verification remains before 100% completion.\n\n## Core architecture
 - Separate Customer and Admin Next.js applications.
 - Backend: Java, Spring Boot, Maven, Spring Security, Spring Data JPA, Hibernate.
 - Database: MySQL; Flyway migrations under backend resources.
