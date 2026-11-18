@@ -17,6 +17,17 @@ public class OrderEmailListener {
         this.email=email; this.storefrontUrl=storefrontUrl.replaceAll("/+$","");
     }
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
+    public void onOrderStatusChanged(OrderStatusEmailEvent event) {
+        try {
+            email.sendText(event.recipientEmail(), "LUXE PERFUME order update — " + event.orderNumber(),
+                    "Your order " + event.orderNumber() + " status is now " + event.status() + ".");
+        } catch (RuntimeException ex) {
+            log.error("Order status email failed for order {}. The committed order update is unaffected.",
+                    event.orderNumber());
+        }
+    }
+
+    @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
     public void onOrderPlaced(OrderEmailEvent event) {
         String subject="LUXE PERFUME order confirmation — "+event.orderNumber();
         String text="Thank you for your order.\nOrder: "+event.orderNumber()
