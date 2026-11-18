@@ -13,7 +13,7 @@ import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact, contactFormMode} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
 import {signIn, registerAccount, getCurrentUser, signOut} from "@/lib/auth";
-import {getAddresses,createAddress,deleteAddress,setDefaultAddress,type Address} from "@/lib/commerce";
+import {getAddresses,createAddress,deleteAddress,setDefaultAddress,previewCheckout,placeOrder,requestCodPayment,type Address,type CheckoutQuote} from "@/lib/commerce";
 
 type CartLine = { id: string; qty: number; size?: string; cartItemId?: number; variantId?: number };
 type ResolvedCartLine = CartLine & { p: Product };
@@ -213,61 +213,53 @@ export function CartPage(){
 }
 export function WishlistPage(){const {products,wish,toggleWish,add,notify}=useStore();const saved=products.filter(p=>wish.includes(p.id));return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">YOUR FAVOURITES</span><h1>Wish <em>List</em></h1></div>{saved.length?<div className="product-grid">{saved.map(p=><div key={p.id}><ProductCard p={p}/><button className="text-btn" onClick={()=>{toggleWish(p.id);notify(`${p.name} removed from wishlist`);}}>REMOVE FROM WISHLIST</button><button className="text-btn" disabled={productStock(p,p.size)<1} onClick={()=>{add(p.id,p.size);notify(`${p.name} added to bag`);}}>{productStock(p,p.size)>0?"ADD TO BAG":"OUT OF STOCK"}</button></div>)}</div>:<div className="empty-state"><Heart size={40}/><h2>No saved fragrances yet</h2><Link className="gold-btn" href="/shop">EXPLORE PERFUMES</Link></div>}</main>}
 export function CheckoutPage(){
- const {products,cart,clearCart}=useStore();
- const lines: ResolvedCartLine[] = cart.map((line)=>({...line,p:products.find((product)=>product.id===line.id)})).filter((line): line is ResolvedCartLine => Boolean(line.p));
- const subtotal=lines.reduce((total,line)=>total+productPrice(line.p,line.size||"100ml")*line.qty,0);
- const [method,setMethod]=useState<DemoOrder["payment"]>("bkash");
+ const {products,cart}=useStore();
+ const lines:ResolvedCartLine[]=cart.map(line=>({...line,p:products.find(product=>product.id===line.id)})).filter((line):line is ResolvedCartLine=>Boolean(line.p));
+ const [addresses,setAddresses]=useState<Address[]>([]);
+ const [addressId,setAddressId]=useState("");
  const [coupon,setCoupon]=useState("");
- const [appliedCoupon,setAppliedCoupon]=useState("");
- const [couponMessage,setCouponMessage]=useState("");
- const [error,setError]=useState("");
+ const [quote,setQuote]=useState<CheckoutQuote|null>(null);
+ const [loading,setLoading]=useState(true);
+ const [previewing,setPreviewing]=useState(false);
  const [placing,setPlacing]=useState(false);
+ const [error,setError]=useState("");
+ const [notice,setNotice]=useState("");
  const router=useRouter();
- const discountRate=appliedCoupon==="LUXE10"?0.10:appliedCoupon==="WELCOME5"?0.05:0;
- const discount=Math.min(Math.round(subtotal*discountRate),1000);
- const delivery=subtotal===0||subtotal>=8000?0:120;
- const grandTotal=Math.max(0,subtotal-discount+delivery);
- function applyCoupon(){const code=coupon.trim().toUpperCase();if(code==="LUXE10"||code==="WELCOME5"){setAppliedCoupon(code);setCouponMessage(`${code} applied successfully.`);setError("");}else{setAppliedCoupon("");setCouponMessage("Invalid coupon. Try LUXE10 or WELCOME5.");}}
- function submit(e:FormEvent<HTMLFormElement>){
-  e.preventDefault();setError("");if(!lines.length){setError("Your cart is empty. Add a product before placing an order.");return;}
-  const form=e.currentTarget; if(!form.reportValidity())return;
-  const fd=new FormData(form);const phone=String(fd.get("phone")||"").replace(/[\s-]/g,"");const alt=String(fd.get("altPhone")||"").replace(/[\s-]/g,"");const phonePattern=bdPhonePattern;
-  if(!phonePattern.test(phone)){setError("Enter a valid Bangladesh mobile number (e.g. 01XXXXXXXXX or +8801XXXXXXXXX).");return;}
-  if(alt&&!phonePattern.test(alt)){setError("Alternative phone number is not valid.");return;}
-  if(lines.some((l)=>l.qty>productStock(l.p,l.size||"100ml"))){setError("One or more products exceed available demo stock. Please update your cart.");return;}
-  setPlacing(true);
-  const id="LUX"+Date.now().toString().slice(-8);
-  const data={id,customer:{name:String(fd.get("name")||""),email:String(fd.get("email")||""),phone:String(fd.get("phone")||""),alternativePhone:fd.get("altPhone"),division:String(fd.get("division")||""),district:String(fd.get("district")||""),area:String(fd.get("area")||""),address:String(fd.get("address")||""),postalCode:String(fd.get("postalCode")||""),instructions:String(fd.get("instructions")||"")},items:lines.map((l)=>({id:l.id,name:l.p.name,slug:l.p.slug,size:l.size||"100ml",qty:l.qty,unitPrice:productPrice(l.p,l.size||"100ml"),lineTotal:productPrice(l.p,l.size||"100ml")*l.qty,image:l.p.image})),subtotal,discount,discountCode:appliedCoupon||null,delivery,total:grandTotal,payment:method,createdAt:new Date().toISOString(),status:"Processing · Demo",statusStep:2};
-  try{localStorage.setItem("luxe-last-order",JSON.stringify(data));localStorage.setItem("luxe-order-"+id,JSON.stringify(data));const rawHistory:unknown=JSON.parse(localStorage.getItem("luxe-orders")||"[]");const history=Array.isArray(rawHistory)?rawHistory.filter(isDemoOrder):[];localStorage.setItem("luxe-orders",JSON.stringify([data,...history.filter((order)=>order.id!==id)]));clearCart();router.push("/order-success");}
-  catch{setError("Unable to save your demo order in this browser. Please check browser storage and try again.");setPlacing(false);}
+ useEffect(()=>{let active=true;getAddresses().then(saved=>{if(active){setAddresses(saved);const preferred=saved.find(item=>item.is_default)||saved[0];if(preferred)setAddressId(String(preferred.id));}}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:"Sign in and save a delivery address before checkout.");}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
+ async function calculateQuote(){
+  if(!addressId){setError("Choose a saved delivery address first.");return;}
+  setError("");setNotice("");setPreviewing(true);
+  try{const result=await previewCheckout(Number(addressId),coupon.trim()||undefined);setQuote(result);if(!result.stockAvailable)setNotice("Some cart items are not currently available.");}
+  catch(reason){setQuote(null);setError(reason instanceof Error?reason.message:"Could not calculate the server checkout quote.");}
+  finally{setPreviewing(false);}
  }
- return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">ALMOST YOURS</span><h1>Secure <em>Checkout</em></h1><p>Complete your delivery details and review your order.</p></div>
- {!lines.length?<div className="empty-state"><h2>Your bag is empty</h2><p>Add a fragrance before checkout.</p><Link href="/shop" className="gold-btn">SHOP FRAGRANCES</Link></div>:
- <form className="checkout-grid" onSubmit={submit} noValidate onInvalidCapture={()=>setError("Please complete all required fields correctly before placing your order.")}>
- <div className="checkout-fields"><section className="form-panel"><h2>01. Customer information</h2><div className="form-grid">
- <label>Customer name *<input required minLength={2} name="name" autoComplete="name" placeholder="Your full name"/></label>
- <label>Email address *<input required type="email" name="email" autoComplete="email" placeholder="you@example.com"/></label>
- <label>Phone number *<input required type="tel" name="phone" autoComplete="tel" inputMode="tel" placeholder="01XXXXXXXXX"/></label>
- <label>Alternative phone<input type="tel" name="altPhone" inputMode="tel" placeholder="Optional mobile number"/></label>
- <label>Division *<select required name="division" defaultValue=""><option value="" disabled>Select division</option>{["Dhaka","Chattogram","Rajshahi","Khulna","Barishal","Sylhet","Rangpur","Mymensingh"].map(x=><option key={x}>{x}</option>)}</select></label>
- <label>District *<input required name="district" placeholder="Your district"/></label>
- <label>Area / Thana *<input required name="area" placeholder="Area, thana or upazila"/></label>
- <label>Postal code (optional)<input name="postalCode" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} placeholder="4-digit postal code"/></label>
- <label className="full">Full delivery address *<textarea required minLength={8} name="address" autoComplete="street-address" rows={3} placeholder="House / flat, road, village and nearby landmark"/></label>
- <label className="full">Order instructions (optional)<textarea name="instructions" rows={2} placeholder="Delivery time preference or other instructions"/></label>
- </div></section>
- <section className="form-panel"><h2>02. Payment method</h2><p className="muted small">Choose one payment option. No bank transfer or card payment is offered.</p><div className="payment-options">
- <label className={method==="bkash"?"payment-option selected":"payment-option"}><input type="radio" name="payment" value="bkash" checked={method==="bkash"} onChange={()=>setMethod("bkash")}/><span className="payment-logo bkash">bKash</span><span><b>bKash</b><small>Frontend demo selection only</small></span></label>
- <label className={method==="nagad"?"payment-option selected":"payment-option"}><input type="radio" name="payment" value="nagad" checked={method==="nagad"} onChange={()=>setMethod("nagad")}/><span className="payment-logo nagad">Nagad</span><span><b>Nagad</b><small>Frontend demo selection only</small></span></label>
- <label className={method==="cod"?"payment-option selected":"payment-option"}><input type="radio" name="payment" value="cod" checked={method==="cod"} onChange={()=>setMethod("cod")}/><span className="payment-logo cod">৳</span><span><b>Cash on Delivery</b><small>Pay when your order arrives</small></span></label>
- </div><div className="demo-notice"><b>Demo payment notice</b><p>bKash and Nagad are not connected to a real payment gateway. Selecting either option does not transfer money or confirm a payment. This form only saves a demo order in this browser.</p></div></section></div>
- <aside className="summary"><h3>YOUR ORDER</h3>{lines.map((l)=><div key={`${l.id}-${l.size||l.p.size}`}><span>{l.p.name} ({l.size||"100ml"}) × {l.qty}</span><b>{money(productPrice(l.p,l.size||"100ml")*l.qty)}</b></div>)}<hr/><div><span>Subtotal</span><b>{money(subtotal)}</b></div>
- <div className="coupon-box"><label htmlFor="coupon-code">Discount code</label><div className="coupon-row"><input id="coupon-code" value={coupon} onChange={e=>setCoupon(e.target.value)} placeholder="Enter code"/><button type="button" className="outline-btn" onClick={applyCoupon}>APPLY</button></div>{couponMessage&&<small className={appliedCoupon?"success-text":"form-error"}>{couponMessage}</small>}<small className="muted">Demo codes: LUXE10 (10%) or WELCOME5 (5%), max discount ৳1,000.</small></div>
- <div><span>Discount</span><b>{discount?"− "+money(discount):money(0)}</b></div><div><span>Delivery charge</span><b>{delivery?money(delivery):"FREE"}</b></div><div className="summary-total"><span>Grand total</span><b>{money(grandTotal)}</b></div>
- {error&&<p className="form-error" role="alert">{error}</p>}<button className="gold-btn wide" type="submit" disabled={placing}>{placing?"PLACING DEMO ORDER…":<>PLACE ORDER <ArrowRight/></>}</button><p className="muted small">By placing this order, you agree to the store policies. This is a frontend demo checkout, not a live purchase.</p></aside>
- </form>}</main>
+ async function submitOrder(){
+  if(!quote){await calculateQuote();return;}
+  if(!quote.stockAvailable){setError("Stock is not available for every cart item. Update your cart before placing the order.");return;}
+  setPlacing(true);setError("");setNotice("");
+  try{
+   const order=await placeOrder(Number(addressId),coupon.trim()||undefined);
+   try{await requestCodPayment(order.orderNumber,order.orderNumber+"-"+Date.now());}
+   catch(paymentError){setNotice("Your order was created, but the COD payment request needs staff review: "+(paymentError instanceof Error?paymentError.message:"payment request failed"));}
+   router.push("/order-success?order="+encodeURIComponent(order.orderNumber));
+  }catch(reason){setError(reason instanceof Error?reason.message:"Order could not be created. Please review your cart and try again.");}
+  finally{setPlacing(false);}
+ }
+ const totals=quote?.totals;
+ return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">ALMOST YOURS</span><h1>Secure <em>Checkout</em></h1><p>Choose a saved delivery address and review the server-calculated order total.</p></div>
+  {loading?<p className="muted">Loading your saved addresses…</p>:!addresses.length?<div className="empty-state"><h2>Delivery address required</h2><p>Sign in and add a delivery address to your account before checkout.</p><Link href="/account" className="gold-btn">MANAGE ACCOUNT & ADD ADDRESS</Link></div>:!lines.length?<div className="empty-state"><h2>Your bag is empty</h2><p>Add a fragrance before checkout.</p><Link href="/shop" className="gold-btn">SHOP FRAGRANCES</Link></div>:
+  <div className="checkout-grid"><div className="checkout-fields"><section className="form-panel"><h2>01. Delivery address</h2><label>Choose saved address<select value={addressId} onChange={e=>{setAddressId(e.target.value);setQuote(null);}} className="w-full" required><option value="">Select an address</option>{addresses.map(item=><option key={item.id} value={item.id}>{item.label} · {item.recipient_name} · {item.phone} · {item.city}</option>)}</select></label>{addresses.filter(item=>String(item.id)===addressId).map(item=><div key={item.id} className="saved-address"><div><b>{item.recipient_name}</b><p>{item.phone}<br/>{item.address_line1}, {item.area}, {item.city}, {item.district} {item.postal_code}</p></div></div>)}<Link href="/account" className="continue-link">Manage saved addresses <ArrowRight size={14}/></Link></section>
+   <section className="form-panel"><h2>02. Payment method</h2><div className="payment-option selected"><span className="payment-logo cod">৳</span><span><b>Cash on Delivery</b><small>Pay the courier when your order arrives. No online payment is collected here.</small></span></div><div className="demo-notice"><b>Payment availability</b><p>Only the backend-supported Cash on Delivery workflow is enabled. bKash and Nagad are not presented as successful payment options because live gateway integration is not yet available.</p></div></section>
+   <section className="form-panel"><h2>03. Discount code</h2><div className="coupon-row"><input value={coupon} onChange={e=>{setCoupon(e.target.value);setQuote(null);}} placeholder="Enter coupon code"/><button type="button" className="outline-btn" onClick={()=>void calculateQuote()} disabled={previewing}>{previewing?"CHECKING…":"VALIDATE"}</button></div></section>
+  </div>
+  <aside className="summary"><h3>SERVER CHECKOUT QUOTE</h3>{lines.map(line=><div key={line.id+"-"+line.size}><span>{line.p.name} · {line.size||line.p.size} × {line.qty}</span><b>{money(productPrice(line.p,line.size||"100ml")*line.qty)}</b></div>)}<hr/>{totals?<><div><span>Subtotal</span><b>{money(Number(totals.subtotal))}</b></div><div><span>Discount</span><b>{money(Number(totals.discountTotal))}</b></div><div><span>Delivery</span><b>{money(Number(totals.shippingTotal))}</b></div><div><span>Tax</span><b>{money(Number(totals.taxTotal))}</b></div><div className="summary-total"><span>Grand total</span><b>{money(Number(totals.grandTotal))}</b></div><p className="muted small">{quote?.notice}</p></>:<p className="muted small">Calculate a checkout quote to see authoritative prices, discounts, shipping and stock validation.</p>}
+   {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="demo-notice" role="status">{notice}</p>}
+   <button className="outline-btn wide" type="button" disabled={previewing||!addressId} onClick={()=>void calculateQuote()}>{previewing?"CALCULATING…":"RECALCULATE QUOTE"}</button>
+   <button className="gold-btn wide" type="button" disabled={placing||!quote||!quote.stockAvailable} onClick={()=>void submitOrder()}>{placing?"CREATING ORDER…":<>PLACE ORDER · COD <ArrowRight/></>}</button>
+   <p className="muted small">The backend recalculates prices and reserves inventory transactionally when the order is placed.</p>
+  </aside></div>}
+ </main>;
 }
-
 export function AboutPage(){return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">THE LUXE STORY</span><h1>Our <em>Story</em></h1><p>A fragrance-led storefront concept built around discovery and personal expression.</p></div><div className="about-split"><div className="about-copy"><span className="eyebrow gold">OUR PHILOSOPHY</span><h2>{brandContent.aboutStory.heading}</h2>{brandContent.aboutStory.paragraphs.map((paragraph,index)=><p key={index}>{paragraph}</p>)}</div><div className="about-media">{brandContent.aboutMedia.type==="video"&&brandContent.aboutMedia.videoUrl?<video controls playsInline preload="metadata" poster={brandContent.aboutMedia.imageUrl}><source src={brandContent.aboutMedia.videoUrl}/></video>:<Image src={brandContent.aboutMedia.imageUrl} alt={brandContent.aboutMedia.alt} width={900} height={1100}/>}<div className="media-replacement-note"><span className="eyebrow gold">BRAND FILM / EDITORIAL IMAGE</span><p>Edit src/lib/brand-content.ts to replace this image or set the media type to video and add an approved MP4/WebM URL.</p></div></div></div><section className="section"><div className="center-heading"><span className="eyebrow gold">WHAT GUIDES US</span><h2>Our Mission, <em>Vision & Values</em></h2></div><div className="note-pyramid"><div><span className="eyebrow gold">MISSION</span><h3>{brandContent.mission.title}</h3><p>{brandContent.mission.description}</p></div><div><span className="eyebrow gold">VISION</span><h3>{brandContent.vision.title}</h3><p>{brandContent.vision.description}</p></div><div><span className="eyebrow gold">VALUES</span><h3>{brandContent.values.title}</h3><p>{brandContent.values.description}</p></div></div></section><section className="section"><div className="section-intro"><span className="eyebrow gold">CRAFTSMANSHIP</span><h2>Details make the <em>difference</em></h2><p>{brandContent.craftsmanship}</p></div><div className="craft-band"><div className="wrap craft-inner"><div><span className="eyebrow gold">SUSTAINABILITY</span><h2>Thoughtful choices,<br/><em>honestly shared.</em></h2></div><p>{brandContent.sustainability}</p><Link className="outline-btn" href="/contact">CONTACT US <ArrowRight/></Link></div></div></section><section className="section"><div className="section-intro"><span className="eyebrow gold">BRAND TIMELINE</span><h2>A story still <em>unfolding</em></h2><p>Replace these milestones with the real dates and events from your brand journey.</p></div><ol className="brand-timeline">{brandContent.timeline.map((item)=><li key={item.title}><b>{item.title}</b><span>{item.description}</span></li>)}</ol></section></main>}
 export function ContactPage(){
  const [status,setStatus]=useState<"idle"|"sending"|"sent"|"error">("idle");
