@@ -28,12 +28,12 @@ export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0
   }
   const prices=variants.map(v=>Number(v.price||0)).filter(Number.isFinite);
   const minPrice=Number(record.price_min??(prices.length?Math.min(...prices):0));
-  const maxPrice=Number(record.price_max??(prices.length?Math.max(...prices):minPrice));
+
   const image=primaryImage||fallback.image;
   const images=detail.images?.map(item=>item.image_url).filter(Boolean) || (primaryImage?[primaryImage]:[]);
   return {
     id:String(record.id),slug:record.slug,name:record.name,brand:record.brand_name||String((detail as Record<string,unknown>).brand_name||"LUXE PERFUME"),
-    gender:"Unisex",collection:record.category_name||"Fragrance",price:minPrice,oldPrice:maxPrice>minPrice?maxPrice:undefined,
+    gender:"Unisex",collection:record.category_name||"Fragrance",price:minPrice,
     size:variants[0]?(String(variants[0].variantName||variants[0].variant_name||"100ml")):"100ml",
     notes:record.short_description||detail.description||"",description:detail.description||record.short_description||"",
     image,images,badge:record.is_featured?"Featured":undefined,rating:0,reviewCount:0,
