@@ -154,7 +154,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [java-kotlin, javascript-typescript]
+        include:
+          - language: java-kotlin
+            build-mode: ${{ matrix.build-mode }}
+          - language: javascript-typescript
+            build-mode: none
     steps:
       - uses: actions/checkout@v4
       - name: Initialize CodeQL
