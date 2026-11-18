@@ -2,18 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Search, Plus, Pencil, Trash2, X, Check, RefreshCw } from "lucide-react";
-import { adminApi } from "@/lib/management";
+import { adminApi, type AnalyticsOverview } from "@/lib/management";
 
 type Row = Record<string, unknown> & { id: number | string };
-type Resource = "products" | "categories" | "brands" | "collections" | "orders" | "customers" | "payments" | "inventory" | "contacts" | "returns";
-const titles:Record<string,string>={products:"Products",categories:"Categories",brands:"Brands",collections:"Collections",orders:"Orders",inventory:"Inventory","contact-messages":"Contact Messages",returns:"Return Requests"};
+type Resource = "products" | "categories" | "brands" | "collections" | "orders" | "customers" | "payments" | "inventory" | "contacts" | "returns" | "coupons" | "banners" | "reviews" | "newsletter" | "analytics";
+const titles:Record<string,string>={products:"Products",categories:"Categories",brands:"Brands",collections:"Collections",orders:"Orders",customers:"Customers",payments:"Payments",inventory:"Inventory","contact-messages":"Contact Messages",returns:"Return Requests",coupons:"Coupons & Discounts",banners:"Banners",reviews:"Reviews",newsletter:"Newsletter",analytics:"Analytics"};
 const aliases:Record<string,string>={"contact-messages":"contacts","returns":"returns"};
 const unsupported:Record<string,string>={
- coupons:"Coupon validation exists in checkout, but staff coupon CRUD endpoints are not available yet.",
- reviews:"Review moderation endpoints are not available in the current backend.",
- banners:"Banner management endpoints are not available in the current backend.",
- newsletter:"Public newsletter double opt-in exists; staff subscriber-list management is not available yet.",
- analytics:"Live analytics/reporting endpoints are not available yet.",
  staff:"Staff and role administration endpoints are not available in the current backend.",
  settings:"Store settings endpoints are not available in the current backend."
 };
@@ -21,8 +16,9 @@ const unsupported:Record<string,string>={
 export function ManagementWorkspace({section}:{section:string}) {
  const key=aliases[section]||section;
  const resource=key as Resource;
- const supported=["products","categories","brands","collections","orders","customers","payments","inventory","contacts","returns"].includes(resource);
+ const supported=["products","categories","brands","collections","orders","customers","payments","inventory","contacts","returns","coupons","banners","reviews","newsletter","analytics"].includes(resource);
  const [rows,setRows]=useState<Row[]>([]);
+ const [analytics,setAnalytics]=useState<AnalyticsOverview|null>(null);
  const [query,setQuery]=useState("");
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
@@ -30,7 +26,7 @@ export function ManagementWorkspace({section}:{section:string}) {
  const [notice,setNotice]=useState("");
  const [formOpen,setFormOpen]=useState(false);
  const [editing,setEditing]=useState<number|null>(null);
- const [draft,setDraft]=useState({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:""});
+ const [draft,setDraft]=useState({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0"});
  const title=titles[section]||titles[key]||"Management";
 
  const load=useCallback(async()=>{
@@ -48,6 +44,11 @@ export function ManagementWorkspace({section}:{section:string}) {
    if(resource==="inventory")result=await adminApi.lowStock();
    if(resource==="contacts")result=(await adminApi.contacts()).items;
    if(resource==="returns")result=await adminApi.returns();
+   if(resource==="coupons")result=(await adminApi.coupons(query)).items;
+   if(resource==="banners")result=(await adminApi.banners(query)).items;
+   if(resource==="reviews")result=(await adminApi.reviews(query)).items;
+   if(resource==="newsletter")result=(await adminApi.newsletterSubscribers(query)).items;
+   if(resource==="analytics"){setAnalytics(await adminApi.analytics());result=[];}
    setRows(result as Row[]);
   }catch(reason){setError(reason instanceof Error?reason.message:"Unable to load records from the backend.");setRows([]);}
   finally{setLoading(false);}
@@ -56,7 +57,7 @@ export function ManagementWorkspace({section}:{section:string}) {
  useEffect(()=>{void load();},[load]);
  const filtered=useMemo(()=>rows.filter(row=>Object.values(row).join(" ").toLowerCase().includes(query.toLowerCase())),[rows,query]);
 
- function resetForm(){setDraft({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:""});setEditing(null);setFormOpen(false);}
+ function resetForm(){setDraft({name:"",slug:"",description:"",categoryId:"",brandId:"",sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:"",discountType:"PERCENTAGE",discountValue:"10",minimumOrderAmount:"0",maximumDiscountAmount:"",usageLimit:"",perUserLimit:"",startsAt:"",endsAt:"",imageUrl:"",targetUrl:"",placement:"HOME_HERO",sortOrder:"0"});setEditing(null);setFormOpen(false);}
  function startEdit(row:Row){
   setEditing(Number(row.id));
   setDraft({name:String(row.name||""),slug:String(row.slug||""),description:String(row.description||""),categoryId:String(row.category_id||""),brandId:String(row.brand_id||""),sku:"",variantName:"",price:"",initialStock:"0",quantityChange:"",note:""});
