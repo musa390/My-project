@@ -10,6 +10,7 @@ import {money,productPrice,productStock} from "@/lib/products";
 import {getCatalog,getProduct,getCuratedProducts,getCart,getWishlist,addCartItem,updateCartItem,removeCartItem,addWishlistItem,removeWishlistItem} from "@/lib/commerce";
 import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact} from "@/lib/site-config";
+import {brandContent} from "@/lib/brand-content";
 import {signIn, registerAccount, getCurrentUser, signOut} from "@/lib/auth";
 import {getAddresses,createAddress,deleteAddress,setDefaultAddress,previewCheckout,placeOrder,requestCodPayment,getOrders,getOrder,getOrderTracking,cancelOrder,subscribeNewsletter,submitContact,type Address,type CheckoutQuote,type CustomerOrder} from "@/lib/commerce";
 
