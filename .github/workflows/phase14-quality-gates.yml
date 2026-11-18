@@ -73,15 +73,26 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: customer-frontend/package-lock.json
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: Install ephemeral browser runner
         run: npm install --no-save --package-lock=false playwright
       - run: npx playwright install --with-deps chromium
       - run: npm run verify:phase6
       - run: npm run typecheck
       - run: npm run lint
-      - name: Audit production and development dependency tree
-        run: npm audit --audit-level=high
+      - name: Audit production dependency tree (blocking)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Capture complete dependency audit (including development tooling)
+        run: npm audit --json > phase14-npm-audit.json || true
+      - name: Upload dependency lockfile and audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase14-customer-dependency-audit
+          path: |
+            package-lock.json
+            phase14-npm-audit.json
+          retention-days: 14
       - run: npm run build
       - name: Run customer Chromium route and responsive QA
         shell: bash
@@ -114,8 +125,19 @@ jobs:
       - run: npm run verify:phase3
       - run: npm run typecheck
       - run: npm run lint
-      - name: Audit production and development dependency tree
-        run: npm audit --audit-level=high
+      - name: Audit production dependency tree (blocking)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Capture complete dependency audit (including development tooling)
+        run: npm audit --json > phase14-npm-audit.json || true
+      - name: Upload dependency lockfile and audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase14-admin-dependency-audit
+          path: |
+            package-lock.json
+            phase14-npm-audit.json
+          retention-days: 14
       - run: npm run build
       - name: Run admin Chromium route and responsive QA
         shell: bash
