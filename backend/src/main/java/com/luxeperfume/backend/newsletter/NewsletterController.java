@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -19,6 +20,7 @@ import java.util.HexFormat;
 import java.util.Map;
 
 @RestController
+@Validated
 @RequestMapping("/api/v1/newsletter")
 public class NewsletterController {
     private final JdbcTemplate jdbc;
