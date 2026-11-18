@@ -103,7 +103,7 @@ async function apiRequestInternal<T>(
 
   const payload = await readResponse(response);
   if (!response.ok) {
-    if (response.status === 401 && allowRefresh && !isUnsafeMethod && !/\\/auth\\/(login|register|refresh|logout)(?:$|\\?)/.test(path)) {
+    if (response.status === 401 && allowRefresh && !isUnsafeMethod && !(path.includes("/api/v1/auth/login") || path.includes("/api/v1/auth/register") || path.includes("/api/v1/auth/refresh") || path.includes("/api/v1/auth/logout"))) {
       try {
         if (!refreshPromise) refreshPromise = refreshSession();
         await refreshPromise;
