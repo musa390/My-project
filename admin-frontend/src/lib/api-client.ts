@@ -44,7 +44,7 @@ export async function getCsrfToken(forceRefresh = false): Promise<string> {
   try { return await csrfRequest; } finally { csrfRequest = null; }
 }
 
-export type ApiRequestOptions = Omit<RequestInit, "body"> & { body?: unknown; csrf?: boolean };
+export type ApiRequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
@@ -60,7 +60,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     body = JSON.stringify(options.body);
   }
 
-  if (unsafe && options.csrf !== false) headers.set("X-XSRF-TOKEN", await getCsrfToken());
+  if (unsafe) headers.set("X-XSRF-TOKEN", await getCsrfToken());
 
   const response = await fetch(`${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`, {
     ...options, method, headers, body, credentials: "include", cache: "no-store",
