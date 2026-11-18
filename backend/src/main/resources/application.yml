@@ -24,6 +24,10 @@ spring:
     clean-disabled: true
 server:
   port: ${BACKEND_PORT:8080}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   error:
     include-message: never
 management:
@@ -36,6 +40,9 @@ management:
       probes:
         enabled: true
 app:
+  storefront-url: ${STOREFRONT_URL:http://localhost:3000}
+  contact:
+    admin-email: ${CONTACT_ADMIN_EMAIL:}
   checkout:
     # Explicit development defaults; set these server-side for the real delivery/tax policy.
     shipping:
