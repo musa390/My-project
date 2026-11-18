@@ -11,7 +11,7 @@ import {getCatalog,getProduct,getCuratedProducts,getCart,getWishlist,addCartItem
 import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
-import {signIn, registerAccount, getCurrentUser, signOut} from "@/lib/auth";
+import {signIn, registerAccount, getCurrentUser, signOut, requestPasswordReset, resetPassword} from "@/lib/auth";
 import {getAddresses,createAddress,deleteAddress,setDefaultAddress,previewCheckout,placeOrder,requestCodPayment,getOrders,getOrder,getOrderTracking,cancelOrder,subscribeNewsletter,submitContact,type Address,type CheckoutQuote,type CustomerOrder} from "@/lib/commerce";
 
 type CartLine = { id: string; qty: number; size?: string; cartItemId?: number; variantId?: number };
@@ -328,6 +328,7 @@ export function AuthPage({mode}:{mode:"login"|"register"}){
   </form>
   {message&&<p className={messageError?"form-error":"demo-notice"} role={messageError?"alert":"status"} aria-live="polite">{message}</p>}
   <div className="demo-notice"><b>Secure backend authentication</b><p>Credentials are sent directly to the backend over the configured API origin. Session tokens are stored in HttpOnly cookies, not browser localStorage.</p></div>
+  <p className="muted small"><Link href="/forgot-password">Forgot your password?</Link></p>
   <div style={{marginTop:20,borderTop:"1px solid var(--line)",paddingTop:18}}>
    <h2 style={{fontSize:20,marginBottom:12}}>Or continue with Google</h2>
    <button className="outline-btn wide" type="button" disabled={!OAUTH_READY} aria-disabled={!OAUTH_READY}>G&nbsp; CONTINUE WITH GOOGLE</button>
@@ -337,6 +338,20 @@ export function AuthPage({mode}:{mode:"login"|"register"}){
   <Link className="continue-link" href="/account">View account profile UI <ArrowRight size={14}/></Link>
   <Link className="continue-link" href="/my-orders">View order history <ArrowRight size={14}/></Link>
  </div></main>;
+}
+export function ForgotPasswordPage(){
+ const [token,setToken]=useState("");const [email,setEmail]=useState("");const [password,setPassword]=useState("");const [confirm,setConfirm]=useState("");
+ const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");const [failed,setFailed]=useState(false);
+ useEffect(()=>{setToken(new URLSearchParams(window.location.search).get("token")||"");},[]);
+ async function submit(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();setBusy(true);setMessage("");setFailed(false);
+  try{
+   if(token){if(password!==confirm)throw new Error("The passwords do not match.");await resetPassword(token,password);setMessage("Password updated. Please sign in with your new password.");}
+   else{await requestPasswordReset(email);setMessage("If an account exists for that email, reset instructions will be sent.");}
+  }catch(error){setMessage(error instanceof Error?error.message:"Password reset could not be completed.");setFailed(true);}
+  finally{setBusy(false);}
+ }
+ return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">ACCOUNT RECOVERY</span><h1>{token?<>Reset Your <em>Password</em></>:<>Forgot Your <em>Password?</em></>}</h1><p>{token?"Choose a new password for your LUXE account.":"Enter your account email and we will send reset instructions if the account exists."}</p></div><form className="form-panel form-grid" onSubmit={submit}>{token?<><label className="full">New password<input required type="password" minLength={12} maxLength={72} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/></label><label className="full">Confirm new password<input required type="password" minLength={12} maxLength={72} autoComplete="new-password" value={confirm} onChange={e=>setConfirm(e.target.value)}/></label></>:<label className="full">Email address<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>}<div className="full"><button className="gold-btn" type="submit" disabled={busy}>{busy?"PLEASE WAIT…":token?"RESET PASSWORD":"SEND RESET INSTRUCTIONS"} <ArrowRight/></button></div>{message&&<p className={failed?"form-error":"success-text"} role={failed?"alert":"status"}>{message}</p>}<Link className="continue-link" href="/login">Back to sign in <ArrowRight size={14}/></Link></form></main>;
 }
 export function LoginPage(){return <AuthPage mode="login"/>;}
 export function RegisterPage(){return <AuthPage mode="register"/>;}
