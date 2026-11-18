@@ -1,6 +1,10 @@
 spring:
   application:
     name: luxe-perfume-backend
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:luxe_perfume}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: ${MYSQL_USER:luxe_app}
@@ -24,10 +28,6 @@ spring:
     clean-disabled: true
 server:
   port: ${BACKEND_PORT:8080}
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 11MB
   error:
     include-message: never
 management:
