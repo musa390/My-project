@@ -29,7 +29,7 @@ type StoreContextValue = {
  catalogError: string;
  cart: CartLine[];
  wish: string[];
- add: (id: string, size?: string, qty?: number) => void;
+ add: (id: string, size?: string, qty?: number) => Promise<boolean>;
  remove: (id: string, size?: string) => void;
  setQty: (id: string, size: string | undefined, qty: number) => void;
  toggleWish: (id: string) => void;
@@ -64,28 +64,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
  },[]);
  useEffect(()=>{
   let active=true;
-  getCurrentUser().then(async()=>{
-   const [serverCart,serverWishlist]=await Promise.all([getCart(),getWishlist()]);
-   if(active){setCart(mapCart(serverCart.items));setWish(serverWishlist.items.map(item=>String(item.product_id)));}
-  }).catch(()=>{if(active){setCart([]);setWish([]);}});
-  return ()=>{active=false;};
+  const refreshCustomerData=async()=>{
+   try{
+    await getCurrentUser();
+    const [serverCart,serverWishlist]=await Promise.all([getCart(),getWishlist()]);
+    if(active){setCart(mapCart(serverCart.items));setWish(serverWishlist.items.map(item=>String(item.product_id)));}
+   }catch{
+    if(active){setCart([]);setWish([]);}
+   }
+  };
+  void refreshCustomerData();
+  window.addEventListener("luxe:session-changed",refreshCustomerData);
+  return ()=>{active=false;window.removeEventListener("luxe:session-changed",refreshCustomerData);};
  },[]);
  useEffect(()=>{if(!toast)return;const timer=window.setTimeout(()=>setToast(null),2600);return()=>window.clearTimeout(timer);},[toast]);
- const add=(id:string,size="100ml",qty=1)=>{
-  void (async()=>{
-   const product=products.find(item=>item.id===id);
-   if(!product||!Number.isInteger(qty)||qty<1)return;
-   try{
-    const detail=await getProduct(product.slug);
-    const variants=detail.variants||[];
-    const target=variants.find(v=>String(v.variant_name||"").toLowerCase().replace(/\\s/g,"")===size.toLowerCase().replace(/\\s/g,""))
-      ||variants.find(v=>Number(v.volume_ml)===Number(size.replace(/[^0-9]/g,"")));
-    if(!target)throw new Error("The selected bottle size is not available for this product.");
-    const updated=await addCartItem(Number(target.id),qty);
-    setCart(mapCart(updated.items));
-    notify(product.name+" added to your server cart.");
-   }catch(error){notify(error instanceof Error?error.message:"Could not add this product to your cart.");}
-  })();
+ const add=async(id:string,size="100ml",qty=1):Promise<boolean>=>{
+  const product=products.find(item=>item.id===id);
+  if(!product||!Number.isInteger(qty)||qty<1)return false;
+  try{
+   const detail=await getProduct(product.slug);
+   const variants=detail.variants||[];
+   const target=variants.find(v=>String(v.variant_name||"").toLowerCase().replace(/\\s/g,"")===size.toLowerCase().replace(/\\s/g,""))
+     ||variants.find(v=>Number(v.volume_ml)===Number(size.replace(/[^0-9]/g,"")));
+   if(!target)throw new Error("The selected bottle size is not available for this product.");
+   const updated=await addCartItem(Number(target.id),qty);
+   setCart(mapCart(updated.items));
+   notify(product.name+" added to your server cart.");
+   return true;
+  }catch(error){
+   notify(error instanceof Error?error.message:"Could not add this product to your cart.");
+   return false;
+  }
  };
  const remove=(id:string,size?:string)=>{
   const target=cart.find(line=>line.id===id&&(!size||line.size===size));
