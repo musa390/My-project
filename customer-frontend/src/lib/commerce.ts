@@ -12,7 +12,7 @@ async function data<T>(path: string, options?: Parameters<typeof apiRequest<ApiE
 export type CatalogProduct = {
   id: number; name: string; slug: string; short_description?: string; product_type?: string;
   category_name?: string; category_slug?: string; brand_name?: string; image_url?: string;
-  price_min?: number | string; price_max?: number | string; available?: boolean; is_featured?: boolean; available_stock?: number; variants?: unknown;
+  price_min?: number | string; price_max?: number | string; available?: boolean; is_featured?: boolean; available_stock?: number; rating_avg?: number|string; review_count?: number; variants?: unknown;
 };
 export type ProductDetail = CatalogProduct & {
   description?: string;
