@@ -43,6 +43,14 @@ export async function getCategories(): Promise<Array<Record<string, unknown>>> {
 export async function getCollections(): Promise<Array<Record<string, unknown>>> {
   return data("/api/v1/catalog/collections");
 }
+export type CollectionProductRef = { id:number; name:string; slug:string; short_description?:string; price_min?:number|string };
+export type StoreCollection = {
+  id:number; name:string; slug:string; description?:string; cover_image_url?:string;
+  products:CollectionProductRef[];
+};
+export async function getCollection(slug:string):Promise<StoreCollection> {
+  return data(`/api/v1/catalog/collections/${encodeURIComponent(slug)}`);
+}
 
 export type Address = {
   id: number; label: string; recipient_name: string; phone: string;
