@@ -12,6 +12,7 @@ public class PasswordResetEmailListener {
     public PasswordResetEmailListener(ResendEmailService email){this.email=email;}
     @TransactionalEventListener(phase=TransactionPhase.AFTER_COMMIT)
     public void send(PasswordResetEmailEvent event){
+        if (!email.isConfigured()) return;
         try{
             email.sendText(event.recipientEmail(),"Reset your LUXE PERFUME password",
                     "Use this one-time link within 30 minutes: "+event.resetLink());
