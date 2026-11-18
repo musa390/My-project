@@ -1,6 +1,7 @@
 package com.luxeperfume.backend.admin;
 
 import com.luxeperfume.backend.auth.StaffCustomerController;
+import com.luxeperfume.backend.auth.StaffAccessController;
 import com.luxeperfume.backend.catalog.StaffBannerController;
 import com.luxeperfume.backend.catalog.StaffCouponController;
 import com.luxeperfume.backend.catalog.StaffReviewController;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class Phase13StaffIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired StaffCustomerController customers;
+    @Autowired StaffAccessController access;
     @Autowired StaffPaymentQueryController payments;
     @Autowired StaffCouponController coupons;
     @Autowired StaffBannerController banners;
@@ -44,9 +46,22 @@ class Phase13StaffIntegrationTest {
                 """,email);
         Long staffId=jdbc.queryForObject("SELECT id FROM users WHERE email=?",Long.class,email);
         jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='ADMIN'",staffId);
-        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(staffId,"unused",
+        var adminAuth=new TestingAuthenticationToken(staffId,"unused",
                 "ROLE_ADMIN","PERM_customers.read","PERM_payments.read","PERM_promotions.write",
-                "PERM_reviews.moderate","PERM_newsletter.manage","PERM_dashboard.read","PERM_orders.write","PERM_staff.manage"));
+                "PERM_reviews.moderate","PERM_newsletter.manage","PERM_dashboard.read","PERM_orders.write","PERM_staff.manage");
+        SecurityContextHolder.getContext().setAuthentication(adminAuth);
+
+        assertThat(access.users().data()).isNotEmpty();
+        assertThat(access.roles().data()).isNotEmpty();
+        String targetEmail="phase13-role-target-"+UUID.randomUUID()+"@example.invalid";
+        jdbc.update("""
+                INSERT INTO users(email,password_hash,first_name,last_name,account_status,email_verified_at)
+                VALUES(?, 'not-a-real-password-hash', 'Role', 'Target', 'ACTIVE', UTC_TIMESTAMP())
+                """,targetEmail);
+        Long targetId=jdbc.queryForObject("SELECT id FROM users WHERE email=?",Long.class,targetEmail);
+        jdbc.update("INSERT INTO user_roles(user_id,role_id) SELECT ?,id FROM roles WHERE code='CUSTOMER'",targetId);
+        var assigned=access.replaceRoles(adminAuth,targetId,new StaffAccessController.RoleAssignmentRequest(java.util.List.of("MANAGER")));
+        assertThat(assigned.data().get("roles")).asList().contains("MANAGER").contains("CUSTOMER");
 
         assertThat(customers.search(null,null,0,10).data()).containsKey("items");
         assertThat(payments.search(null,null,0,10).data()).containsKey("items");
