@@ -5,7 +5,7 @@ services:
     name: luxe-perfume-staging-api
     runtime: docker
     plan: free
-    region: singapore
+    region: oregon
     branch: phase14/staging-deployment-setup
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
