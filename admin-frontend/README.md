@@ -9,7 +9,7 @@ Next.js 15 / React 19 / TypeScript admin workspace connected to the authenticate
 - Categories, brands and collections: create, edit and deactivate.
 - Orders: search and update allowed order statuses.
 - Customers: directory, detail-ready records and Admin-only account suspension/reactivation.
-- Payments: search and confirm supported Cash on Delivery collections.
+- Payments: search, confirm supported Cash on Delivery collections and queue manual refund requests.
 - Inventory: low-stock list and audited quantity adjustments.
 - Returns: review queue and approve/reject decisions.
 - Contact inbox: search and status updates.
