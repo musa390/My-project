@@ -4,40 +4,18 @@ import Image from "next/image";
 import {useRouter,usePathname,useSearchParams} from "next/navigation";
 import {useEffect,useMemo,useState,createContext,useContext} from "react";
 import type {ReactNode,FormEvent} from "react";
-import {ShoppingBag,Search,UserRound,Heart,Menu,X,ArrowRight,Instagram,Facebook,MapPin,Minus,Plus,Trash2,CheckCircle2} from "lucide-react";
+import {ShoppingBag,Search,UserRound,Heart,Menu,X,ArrowRight,Instagram,Facebook,Minus,Plus,Trash2,CheckCircle2} from "lucide-react";
 import type {Product} from "@/lib/products";
 import {money,productPrice,productStock} from "@/lib/products";
 import {getCatalog,getProduct,getCart,getWishlist,addCartItem,updateCartItem,removeCartItem,addWishlistItem,removeWishlistItem} from "@/lib/commerce";
 import {toStoreProduct} from "@/lib/product-adapter";
-import {siteContact, contactFormMode} from "@/lib/site-config";
+import {siteContact} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
 import {signIn, registerAccount, getCurrentUser, signOut} from "@/lib/auth";
 import {getAddresses,createAddress,deleteAddress,setDefaultAddress,previewCheckout,placeOrder,requestCodPayment,getOrders,getOrder,getOrderTracking,cancelOrder,subscribeNewsletter,submitContact,type Address,type CheckoutQuote,type CustomerOrder} from "@/lib/commerce";
 
 type CartLine = { id: string; qty: number; size?: string; cartItemId?: number; variantId?: number };
 type ResolvedCartLine = CartLine & { p: Product };
-type DemoOrderItem = { id: string; name: string; slug: string; size: string; qty: number; unitPrice: number; lineTotal: number; image: string };
-type DemoOrder = {
- id: string;
- customer: { name: string; email: string; phone: string; alternativePhone: string; division: string; district: string; area: string; address: string; postalCode: string; instructions: string };
- items: DemoOrderItem[];
- subtotal: number; discount: number; discountCode: string | null; delivery: number; total: number;
- payment: "bkash" | "nagad" | "cod"; createdAt: string; status: string; statusStep: number;
-};
-const isDemoOrderItem = (value: unknown): value is DemoOrderItem => {
- if (!value || typeof value !== "object") return false;
- const item = value as Record<string, unknown>;
- return typeof item.id === "string" && typeof item.name === "string" && typeof item.slug === "string" && typeof item.size === "string" && Number.isInteger(item.qty) && Number(item.qty) > 0 && typeof item.unitPrice === "number" && typeof item.lineTotal === "number" && typeof item.image === "string";
-};
-const isDemoOrder = (value: unknown): value is DemoOrder => {
- if (!value || typeof value !== "object") return false;
- const order = value as Record<string, unknown>;
- const customer = order.customer;
- if (!customer || typeof customer !== "object") return false;
- const customerRecord = customer as Record<string, unknown>;
- const customerFields = ["name", "email", "phone", "alternativePhone", "division", "district", "area", "address", "postalCode", "instructions"];
- return typeof order.id === "string" && customerFields.every((field) => typeof customerRecord[field] === "string") && Array.isArray(order.items) && order.items.every(isDemoOrderItem) && typeof order.subtotal === "number" && typeof order.discount === "number" && (order.discountCode === null || typeof order.discountCode === "string") && typeof order.delivery === "number" && typeof order.total === "number" && ["bkash", "nagad", "cod"].includes(String(order.payment)) && typeof order.createdAt === "string" && typeof order.status === "string" && Number.isInteger(order.statusStep) && Number(order.statusStep) >= 0 && Number(order.statusStep) <= 5;
-};
 const isStringList = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string") && new Set(value).size === value.length;
 function useSaved<T>(key:string,initial:T,validate:(value:unknown)=>value is T){
  const [value,setValue]=useState<T>(initial);const [loaded,setLoaded]=useState(false);
@@ -363,10 +341,6 @@ export function RegisterPage(){return <AuthPage mode="register"/>;}
 type SavedAddress = { id: string; label: string; name: string; phone: string; division: string; district: string; area: string; fullAddress: string; postalCode: string };
 type AccountProfile = { name: string; email: string; phone: string };
 const bdPhonePattern = /^(?:\+?880|0)1[3-9]\d{8}$/;
-const normalizeBdPhone = (value: string) => {
- const digits = value.replace(/\D/g, "");
- return digits.startsWith("880") && digits.length === 13 ? `0${digits.slice(3)}` : digits;
-};
 const isSavedAddressList = (value: unknown): value is SavedAddress[] => Array.isArray(value) && value.every((item) => item && typeof item.id === "string" && typeof item.label === "string" && typeof item.name === "string" && typeof item.phone === "string" && typeof item.division === "string" && typeof item.district === "string" && typeof item.area === "string" && typeof item.fullAddress === "string" && typeof item.postalCode === "string");
 export function AccountPage(){
  const router=useRouter();
