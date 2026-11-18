@@ -6,7 +6,7 @@ spring:
       max-file-size: 10MB
       max-request-size: 11MB
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:luxe_perfume}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+    url: ${DATABASE_URL:jdbc:mysql://${DB_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:luxe_perfume}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC}
     username: ${MYSQL_USER:luxe_app}
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -27,7 +27,7 @@ spring:
     validate-on-migrate: true
     clean-disabled: true
 server:
-  port: ${BACKEND_PORT:8080}
+  port: ${PORT:${BACKEND_PORT:8080}}
   error:
     include-message: never
 management:

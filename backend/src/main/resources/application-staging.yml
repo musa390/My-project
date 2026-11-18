@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    clean-disabled: true
+server:
+  port: ${PORT:8080}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+app:
+  storefront-url: ${STOREFRONT_URL}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  security:
+    cookies:
+      secure: true
+    jwt:
+      secret-base64: ${JWT_SECRET_BASE64}
+      issuer: ${JWT_ISSUER:luxe-perfume-api}
+      access-minutes: ${JWT_ACCESS_MINUTES:10}
+      refresh-days: ${JWT_REFRESH_DAYS:14}
+    password-reset:
+      frontend-url: ${PASSWORD_RESET_FRONTEND_URL}
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
