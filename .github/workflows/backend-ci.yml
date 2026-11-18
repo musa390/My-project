@@ -12,7 +12,7 @@ on:
       - "docs/PHASE9-CHECKOUT-ORDER-MANAGEMENT-*.md"
       - "docs/PHASE10-PAYMENT-INTEGRATION-*.md"
       - "docs/PHASE11-ADVANCED-BUSINESS-LOGIC-*.md"
-      - "docs/PHASE12-*.md"
+      - "docs/PHASE12*.md"
       - "docs/PROJECT_STATUS.md"
   pull_request:
     paths:
