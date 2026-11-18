@@ -17,9 +17,12 @@
 ## Implemented — Customer
 - Register, login, current-user profile, logout, password-reset request and password reset.
 - HttpOnly access/refresh cookies; tokens are never stored in localStorage.
-- Public product catalogue with categories, brands, images, variants, available stock, featured/new/best-seller endpoints and approved review aggregates.
+- Public product catalogue and live collections with categories, brands, images, variants, available stock, featured/new/best-seller endpoints and approved review aggregates.
+- Product detail and SEO metadata resolve directly by product slug; deep links do not depend on the first 100 catalogue results.
+- Variant prices and available quantities are mapped from backend variant records; synthetic size-price multipliers and hardcoded demo product fixtures have been removed.
 - Full product details are fetched on product pages.
-- Server-backed cart and wishlist, including variant selection and quantity updates.
+- Server-backed cart and wishlist, including variant selection and quantity updates; cart/wishlist rehydrate after login/logout session changes.
+- Buy Now waits for the server cart mutation to succeed before navigating to checkout.
 - Delivery-address CRUD and default-address selection.
 - Server-calculated checkout quote; order creation uses backend pricing, coupon and stock rules.
 - Customer order history, details, cancellation and order tracking.
@@ -61,7 +64,7 @@
 
 ## Verification and completion gate
 - Backend integration tests cover current-user, address ownership, staff customers, payments, coupons, banners, newsletter, reviews and analytics.
-- Frontend CI runs the customer verification helper, TypeScript typecheck, ESLint and production builds for both apps.
+- Frontend CI runs the customer verification helper, TypeScript typecheck, ESLint, production builds and route smoke tests for both apps.
 - A green CI build is necessary but not sufficient.
 - Final 100% sign-off also requires local end-to-end browser QA against a clean migrated MySQL database for customer and admin journeys.
 
@@ -78,8 +81,10 @@ This is a local MySQL credential/permission issue, not evidence of a Phase 13 ap
 - [x] Customer address, checkout, orders, COD and tracking integration.
 - [x] Customer contact and newsletter integration.
 - [x] Admin authentication, role guard and CRUD/management integrations listed above.
-- [x] Replace transactional demo data and client-only mutations in the main customer/admin flows.
-- [x] Final automated CI pass: Backend 80 tests, 0 failures/errors; Flyway 9 migrations validated; customer/admin typecheck, lint, production build and route smoke tests passed. [Backend CI](https://github.com/musa390/My-project/actions/runs/44244391311) · [Frontend CI](https://github.com/musa390/My-project/actions/runs/44244440780).
+- [x] Replace transactional demo data and client-only mutations in the main customer/admin flows; static demo product catalogue removed.
+- [x] Correct frontend API base URL examples to use the backend origin (the API client appends `/api/v1`).
+- [x] Resolve live collection/product route dependencies and exact variant pricing.
+- [x] Latest automated CI pass on commit `814755d`: Backend Maven build/tests and Flyway migration verification passed; customer/admin typecheck, lint, production build and route smoke tests passed. [Backend CI](https://github.com/musa390/My-project/actions/runs/44245739560) · [Frontend CI](https://github.com/musa390/My-project/actions/runs/44245739726).
 - [ ] Local MySQL authentication repair / isolated clean database verification.
 - [ ] Browser end-to-end QA for customer and admin journeys.
 - [ ] Explicit Phase 13 completion sign-off.
