@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import {useRouter,usePathname} from "next/navigation";
+import {useRouter,usePathname,useSearchParams} from "next/navigation";
 import {useEffect,useMemo,useState,createContext,useContext} from "react";
 import type {ReactNode,FormEvent} from "react";
 import {ShoppingBag,Search,UserRound,Heart,Menu,X,ArrowRight,Instagram,Facebook,MapPin,Minus,Plus,Trash2,CheckCircle2} from "lucide-react";
@@ -13,7 +13,7 @@ import {toStoreProduct} from "@/lib/product-adapter";
 import {siteContact, contactFormMode} from "@/lib/site-config";
 import {brandContent} from "@/lib/brand-content";
 import {signIn, registerAccount, getCurrentUser, signOut} from "@/lib/auth";
-import {getAddresses,createAddress,deleteAddress,setDefaultAddress,previewCheckout,placeOrder,requestCodPayment,type Address,type CheckoutQuote} from "@/lib/commerce";
+import {getAddresses,createAddress,deleteAddress,setDefaultAddress,previewCheckout,placeOrder,requestCodPayment,getOrders,getOrder,getOrderTracking,cancelOrder,type Address,type CheckoutQuote,type CustomerOrder} from "@/lib/commerce";
 
 type CartLine = { id: string; qty: number; size?: string; cartItemId?: number; variantId?: number };
 type ResolvedCartLine = CartLine & { p: Product };
@@ -405,9 +405,23 @@ export function AccountPage(){
  </main>;
 }
 export function OrdersPage(){
- const [orders,setOrders]=useState<DemoOrder[]>([]);const [ready,setReady]=useState(false);const [expanded,setExpanded]=useState<string|null>(null);
- useEffect(()=>{try{const parsed:unknown=JSON.parse(localStorage.getItem('luxe-orders')||'[]');setOrders(Array.isArray(parsed)?parsed.filter(isDemoOrder):[]);}catch{setOrders([]);}finally{setReady(true);}},[]);
- return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">YOUR PURCHASES</span><h1>My Order <em>History</em></h1><p>Orders placed from this browser are listed here. These are demo records, not server-backed purchases.</p></div>{!ready?<p className="muted">Loading orders…</p>:orders.length?<div className="orders-list">{orders.map(o=><article className="order-card" key={o.id}><div className="order-card-head"><div><span className="eyebrow gold">ORDER REFERENCE</span><h2>{o.id}</h2></div><span className="order-status">{o.status||'Demo order received'}</span></div><div className="order-card-meta"><span>{new Date(o.createdAt).toLocaleString()}</span><b>{money(o.total)}</b><span>{o.items?.length||0} item(s)</span><span>{o.payment==='bkash'?'bKash':o.payment==='nagad'?'Nagad':'Cash on Delivery'}</span></div><div className="order-card-actions"><button className="outline-btn" type="button" onClick={()=>setExpanded(expanded===o.id?null:o.id)}>{expanded===o.id?"HIDE DETAILS":"VIEW DETAILS"}</button><Link className="outline-btn" href={`/track-order?order=${o.id}`}>TRACK ORDER <ArrowRight size={14}/></Link></div>{expanded===o.id&&<div className="order-detail-panel"><h3>Items in this demo order</h3>{o.items.map((item)=><p key={`${item.id}-${item.size}`}>{item.name} · {item.size} × {item.qty} — {money(item.lineTotal||item.unitPrice*item.qty)}</p>)}<p><b>Delivery address:</b> {o.customer?.address}, {o.customer?.area}, {o.customer?.district}</p><p><b>Phone:</b> {o.customer?.phone}</p><p><b>Payment:</b> {o.payment==='bkash'?'bKash':o.payment==='nagad'?'Nagad':'Cash on Delivery'}</p></div>}</article>)}</div>:<div className="empty-state"><ShoppingBag size={38}/><h2>No demo orders yet</h2><p>After placing a demo order, it will appear here.</p><Link className="gold-btn" href="/shop">SHOP NOW</Link></div>}<p className="muted small">Order history is stored locally in this browser. Clearing browser storage or using another device will remove or hide these demo records.</p></main>;
+ const [orders,setOrders]=useState<CustomerOrder[]>([]);
+ const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [expanded,setExpanded]=useState<string|null>(null);
+ async function load(){setLoading(true);setError("");try{const page=await getOrders(0,50);setOrders(page.items);}catch(reason){setError(reason instanceof Error?reason.message:"Could not load your order history.");}finally{setLoading(false);}}
+ useEffect(()=>{void load();},[]);
+ async function cancel(orderNumber:string){if(!window.confirm("Request cancellation for this order?"))return;try{await cancelOrder(orderNumber,"Customer requested cancellation from My Orders");await load();}catch(reason){setError(reason instanceof Error?reason.message:"This order cannot be cancelled online.");}}
+ return <main className="page wrap"><div className="page-heading"><span className="eyebrow gold">YOUR PURCHASES</span><h1>My Order <em>History</em></h1><p>Your orders are retrieved securely from your LUXE account.</p></div>
+ {loading?<p className="muted">Loading orders…</p>:error?<p className="form-error" role="alert">{error}</p>:orders.length?<div className="orders-list">{orders.map(order=>{
+  const number=String(order.orderNumber);const total=Number(order.grandTotal||0);const status=String(order.orderStatus||"PENDING");
+  return <article className="order-card" key={number}><div className="order-card-head"><div><span className="eyebrow gold">ORDER REFERENCE</span><h2>{number}</h2></div><span className="order-status">{status}</span></div><div className="order-card-meta"><span>{String(order.placedAt||"")}</span><b>{money(total)}</b><span>{Number(order.itemCount||0)} item(s)</span><span>{String(order.paymentStatus||"")}</span></div><div className="order-card-actions"><button className="outline-btn" type="button" onClick={()=>setExpanded(expanded===number?null:number)}>{expanded===number?"HIDE DETAILS":"VIEW DETAILS"}</button><Link className="outline-btn" href={"/track-order?order="+encodeURIComponent(number)}>TRACK ORDER <ArrowRight size={14}/></Link>{["PENDING","CONFIRMED"].includes(status)&&<button className="text-btn" type="button" onClick={()=>void cancel(number)}>REQUEST CANCELLATION</button>}</div>{expanded===number&&<OrderDetailPanel orderNumber={number}/>}</article>;
+ })}</div>:<div className="empty-state"><ShoppingBag size={38}/><h2>No orders yet</h2><p>Your completed checkout orders will appear here.</p><Link className="gold-btn" href="/shop">SHOP NOW</Link></div>}
+ </main>;
+}
+function OrderDetailPanel({orderNumber}:{orderNumber:string}){
+ const [detail,setDetail]=useState<Record<string,unknown>|null>(null);const [error,setError]=useState("");
+ useEffect(()=>{let active=true;getOrder(orderNumber).then(value=>{if(active)setDetail(value);}).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:"Could not load order details.");});return()=>{active=false;};},[orderNumber]);
+ const items=Array.isArray(detail?.items)?detail.items as Array<Record<string,unknown>>:[];
+ return <div className="order-detail-panel"><h3>Order details</h3>{error?<p className="form-error">{error}</p>:!detail?<p className="muted">Loading order details…</p>:<>{items.map((item,index)=><p key={String(item.id||index)}>{String(item.productNameSnapshot||item.product_name_snapshot||"Product")} · {String(item.variantNameSnapshot||item.variant_name_snapshot||"")} × {String(item.quantity||1)} — {money(Number(item.lineTotal||item.line_total||0))}</p>)}<p><b>Delivery to:</b> {String(detail.shippingAddressLine1||detail.shipping_address_line1||"")}, {String(detail.shippingCity||detail.shipping_city||"")}</p><p><b>Payment status:</b> {String(detail.paymentStatus||"")}</p></>}</div>;
 }
 export function PoliciesPage(){return <main className="page wrap narrow"><div className="page-heading"><span className="eyebrow gold">THE DETAILS</span><h1>Store <em>Policies</em></h1></div><h2>Shipping</h2><p className="body-copy">Standard delivery fee is shown as ৳120 for orders below ৳8,000; complimentary delivery is displayed for orders of ৳8,000 or more. Confirm actual coverage and delivery times before launch.</p><h2>Returns & refunds</h2><p className="body-copy">Publish your final return window, eligible product condition, sealed-item rules and refund process here. For hygiene reasons, opened fragrance products may have restrictions under your local policy.</p><h2>Privacy</h2><p className="body-copy">Customer details should only be used to fulfil orders, provide support and send marketing messages where consent has been given. Connect a complete privacy notice before launch.</p><h2>Terms</h2><p className="body-copy">Product availability, prices, delivery charges and order acceptance should be confirmed by the store. These sample terms are placeholders, not legal advice.</p></main>}
 
