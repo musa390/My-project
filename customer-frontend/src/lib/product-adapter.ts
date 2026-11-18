@@ -2,7 +2,7 @@ import type { Product, ProductReview } from "@/lib/products";
 import { products as visualFallbacks } from "@/lib/products";
 import type { CatalogProduct, ProductDetail } from "@/lib/commerce";
 
-type VariantLike = { id?: number; variantName?: string; variant_name?: string; price?: number|string; availableQuantity?: number; available_quantity?: number };
+type VariantLike = { id?: number; variantName?: string; variant_name?: string; volume_ml?: number; price?: number|string; availableQuantity?: number; available_quantity?: number };
 function variantsFrom(value: unknown): VariantLike[] {
   if (Array.isArray(value)) return value as VariantLike[];
   if (typeof value === "string") {
@@ -22,9 +22,14 @@ export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0
   const primaryImage=detail.images?.find(image=>image.is_primary)?.image_url || detail.images?.[0]?.image_url || record.image_url || "";
   const fallback=visualFallbacks[index % visualFallbacks.length];
   const stockBySize:Product["stockBySize"]={"30ml":0,"50ml":0,"100ml":0};
+  const priceBySize:NonNullable<Product["priceBySize"]>={};
   for(const variant of variants){
     const size=volumeOf(variant);
-    if(size)stockBySize[size]=Number(variant.availableQuantity??variant.available_quantity??0);
+    if(size){
+      stockBySize[size]+=Number(variant.availableQuantity??variant.available_quantity??0);
+      const price=Number(variant.price);
+      if(Number.isFinite(price)&&price>0)priceBySize[size]=price;
+    }
   }
   const prices=variants.map(v=>Number(v.price||0)).filter(Number.isFinite);
   const rawReviews=(detail as ProductDetail & {reviews?:Array<Record<string,unknown>>}).reviews||[];
@@ -42,6 +47,6 @@ export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0
     topNotes:[],heartNotes:[],baseNotes:[],fragranceFamily:record.category_name||"Fragrance",
     longevity:"Not specified",sillage:"Not specified",
     stock:Number((record as CatalogProduct & {available_stock?:number}).available_stock??(record.available?1:0)),
-    stockBySize,reviews
+    stockBySize,priceBySize,reviews
   };
 }
