@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
+/** [POL] Concrete state-transition policy used by staff order management. */
 public final class DefaultOrderStatusTransitionPolicy implements OrderStatusTransitionPolicy {
     private static final Map<String, Set<String>> ALLOWED = Map.of(
             "PENDING", Set.of("CONFIRMED", "CANCELLED"),

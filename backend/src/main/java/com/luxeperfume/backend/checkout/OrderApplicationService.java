@@ -3,6 +3,7 @@ package com.luxeperfume.backend.checkout;
 import com.luxeperfume.backend.checkout.domain.CheckoutLine;
 import com.luxeperfume.backend.checkout.domain.Coupon;
 import com.luxeperfume.backend.checkout.domain.OrderNumberGenerator;
+import com.luxeperfume.backend.inventory.domain.InventoryQuantity;
 import com.luxeperfume.backend.checkout.dto.OrderPlacementRequest;
 import com.luxeperfume.backend.checkout.dto.OrderPlacementResponse;
 import com.luxeperfume.backend.checkout.inventory.InventoryReservationService;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Service
+/** [ENC] Order placement consumes validated domain values and persists immutable item snapshots transactionally. */
 public class OrderApplicationService {
     private final JdbcTemplate jdbc;
     private final CheckoutQuoteService quoteService;
@@ -136,8 +138,9 @@ public class OrderApplicationService {
             }
             long onHand = number(inventory.get("quantity_on_hand"));
             long reserved = number(inventory.get("quantity_reserved"));
-            long available = Math.max(0, onHand - reserved);
-            if (available < quantity) {
+            InventoryQuantity stock = new InventoryQuantity(onHand, reserved, 0);
+            long available = stock.availableQuantity();
+            if (!stock.canReserve(quantity)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Insufficient stock for " + variant.get("product_name")
                                 + ". Available quantity: " + available);
