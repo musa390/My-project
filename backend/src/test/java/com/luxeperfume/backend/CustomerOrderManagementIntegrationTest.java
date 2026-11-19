@@ -51,7 +51,6 @@ class CustomerOrderManagementIntegrationTest {
             .andExpect(status().isNotFound());
         mockMvc.perform(get("/api/v1/staff/returns").cookie(owner.access()))
             .andExpect(status().isForbidden());
-
         mockMvc.perform(get("/api/v1/orders").cookie(owner.access()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totalElements").value(1))
@@ -173,7 +172,6 @@ class CustomerOrderManagementIntegrationTest {
                 WHERE variant_id=? AND movement_type='RELEASE' AND reference_type='ORDER' AND reference_id=?
                 """, Integer.class, variantId, orderId)).isZero();
     }
-
     private String placeOrder(Session customer, int quantity) throws Exception {
         long variantId = createVariant(new BigDecimal("725.00"), 8);
         addToCart(customer.userId(), variantId, quantity);
@@ -241,4 +239,5 @@ class CustomerOrderManagementIntegrationTest {
     }
 
     private record Session(Cookie access, long userId) {}
+}
 }
