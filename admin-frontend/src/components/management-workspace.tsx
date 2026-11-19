@@ -75,9 +75,18 @@ export function ManagementWorkspace({section}:{section:string}) {
    if(["categories","brands","collections"].includes(resource)){
     const body={name:draft.name.trim(),slug:draft.slug.trim(),description:draft.description.trim(),active:true};
     if(!body.name)throw new Error("Name is required.");
-    if(resource==="categories")editing?await adminApi.updateCategory(editing,body):await adminApi.createCategory(body);
-    if(resource==="brands")editing?await adminApi.updateBrand(editing,body):await adminApi.createBrand(body);
-    if(resource==="collections")editing?await adminApi.updateCollection(editing,body):await adminApi.createCollection(body);
+    if(resource==="categories"){
+     if(editing) await adminApi.updateCategory(editing,body);
+     else await adminApi.createCategory(body);
+    }
+    if(resource==="brands"){
+     if(editing) await adminApi.updateBrand(editing,body);
+     else await adminApi.createBrand(body);
+    }
+    if(resource==="collections"){
+     if(editing) await adminApi.updateCollection(editing,body);
+     else await adminApi.createCollection(body);
+    }
    }else if(resource==="products"){
     if(editing){
      const body:Record<string,unknown>={name:draft.name.trim(),slug:draft.slug.trim(),description:draft.description.trim()};

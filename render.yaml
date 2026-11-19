@@ -6,7 +6,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    branch: phase14/staging-deployment-setup
+    branch: deployment-complete
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /actuator/health

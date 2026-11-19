@@ -17,7 +17,7 @@ function volumeOf(variant: VariantLike): "30ml"|"50ml"|"100ml"|null {
   const normalized=match?.[1] || ([30,50,100].includes(volume) ? String(volume) : null);
   return normalized ? (normalized+"ml") as "30ml"|"50ml"|"100ml" : null;
 }
-export function toStoreProduct(record: CatalogProduct | ProductDetail, index = 0): Product {
+export function toStoreProduct(record: CatalogProduct | ProductDetail): Product {
   const detail=record as ProductDetail;
   const variants=variantsFrom((record as CatalogProduct & {variants?:unknown}).variants);
   const primaryImage=detail.images?.find(image=>image.is_primary)?.image_url || detail.images?.[0]?.image_url || record.image_url || "";
