@@ -6,7 +6,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    branch: deployment-complete
+    branch: main
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /actuator/health
