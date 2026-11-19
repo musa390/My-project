@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "npm run verify:phase6 && npm run typecheck && npm run lint && npm run build",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "verify:phase6": "node scripts/verify-phase6.mjs"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-19 — Deployment preparation and quality gate
+- Added `test` scripts for both Next.js applications, combining static verification, typecheck, lint and production build.
+- Customer and Admin npm test gates pass with zero npm audit vulnerabilities.
+- Spring Boot backend package compiles successfully with `mvn -DskipTests package`.
+- Created GitHub deployment branch `deployment-complete` and pull request `#13`.
+- Render staging service was found; latest deployment failed with TiDB SQL 1045 access denied.
+- Updated deployment branch, frontend build fixes and Render blueprint target.
+
 ## 2026-11-17 — Phase 5 started
 - Created the phase5/backend-foundation working branch.
 - Added Java 21 / Spring Boot 4.1.2 / Maven backend foundation.

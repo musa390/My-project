@@ -1,5 +1,19 @@
 # Phase Handoff — LUXE PERFUME
 
+## 2026-11-19 deployment checkpoint
+- Current branch: `deployment-complete`
+- Current commit: `4990998`
+- GitHub PR: `musa390/My-project#13`
+- Customer frontend test/build: PASS
+- Admin frontend test/build: PASS
+- Backend Maven package: PASS
+- Render service: existing service found, latest deployment failed
+- Root Render failure: TiDB SQL 1045 access denied for the configured database user
+- TiDB cluster: active and database `luxe_perfume` visible
+- TiDB migrations: not yet verified through the live staging connection
+- Vercel: dashboard access exists, but Customer/Admin project deployment is not complete
+- Live integrations: provider credentials and live/sandbox acceptance remain pending
+
 ## Current checkpoint
 - Phases 0–4: Complete as recorded in `docs/PROJECT_STATUS.md`.
 - Phases 5–9: See `docs/PROJECT_STATUS.md` for the exact CI and owner-local verification gates.

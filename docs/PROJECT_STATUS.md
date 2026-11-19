@@ -1,8 +1,11 @@
 # LUXE PERFUME — Project Status
 
-**Last updated:** 2026-11-18
+**Last updated:** 2026-11-19
 
 ## Overall status
+- Implementation: substantial implementation and GitHub CI exist across Phases 5–13.
+- Deployment: INCOMPLETE — TiDB credential correction and live Vercel/Render verification remain required.
+- Production acceptance: NOT COMPLETE until live database migration, backend health, frontend deployments and browser QA pass.
 - Phase 0 — Complete.
 - Phase 1 — Complete (100%).
 - Phase 2 — Complete (100%); Customer Frontend QA owner-confirmed PASS.

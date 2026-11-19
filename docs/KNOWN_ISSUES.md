@@ -1,9 +1,15 @@
 # Known Issues and Pending Decisions
 
-1. The supplied GitHub repository URL could not be verified from this environment. A browser fetch returned 404 and direct network access was unavailable; this does not establish whether the repository is private, missing or inaccessible for another reason.
-2. Git initialization, initial commit and push are pending repository access and commit-author identity confirmation.
-3. The existing Customer Website report records original storefront Phase 6 as in progress; full runtime, typecheck, lint, build and browser verification remain unconfirmed.
-4. Admin frontend, Spring Boot backend, MySQL ERD/migrations and OpenAPI contract are not implemented.
-5. Owner-supplied brand details, contact information, social links, policy text, image rights and production domain must be verified before launch.
-6. Payment providers remain sandbox/demo only; no real payment processing is configured.
-7. Local MySQL Docker Compose template has been authored but not started or tested.
+## Verified blockers
+
+1. Render service `luxe-perfume-staging-api` is live but its latest deployment failed with TiDB SQLSTATE 28000 / error 1045 because the configured staging database username or password was rejected.
+2. TiDB cluster `luxe-perfume-db` is active, but the staging database user, JDBC host details and migrations have not been verified end-to-end.
+3. Vercel Customer and Admin projects have not been authenticated/deployed successfully in this session.
+4. Google OAuth, Resend, Cloudinary and bKash/Nagad live/sandbox provider credentials are not configured or verified.
+5. Browser end-to-end acceptance and responsive QA against deployed live services remain pending.
+
+## Verified requirements still needing owner approval
+
+1. Brand copy, business contact details, policy text, social links, verified domain and image/media rights.
+2. Payment provider sandbox merchant accounts and callback specifications.
+3. Any real-money, live SSLCommerz, bKash or Nagad activation.
