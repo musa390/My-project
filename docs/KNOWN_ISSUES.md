@@ -7,6 +7,8 @@
 3. Vercel Customer and Admin projects have not been authenticated/deployed successfully in this session.
 4. Google OAuth, Resend, Cloudinary and bKash/Nagad live/sandbox provider credentials are not configured or verified.
 5. Browser end-to-end acceptance and responsive QA against deployed live services remain pending.
+6. SSLCommerz and bKash are implemented behind sandbox configuration, but live merchant credentials and sandbox callback acceptance remain owner/provider dependent.
+7. Nagad is intentionally not integrated per the owner's explicit scope decision.
 
 ## Verified requirements still needing owner approval
 

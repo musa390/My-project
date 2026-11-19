@@ -41,6 +41,17 @@ management:
         enabled: true
 app:
   storefront-url: ${STOREFRONT_URL:http://localhost:3000}
+  payment:
+    sslcommerz:
+      sandbox: ${SSL_COMMERZ_SANDBOX:true}
+      store-id: ${SSL_COMMERZ_STORE_ID:}
+      store-password: ${SSL_COMMERZ_STORE_PASSWORD:}
+    bkash:
+      sandbox: ${BKASH_SANDBOX:true}
+      app-key: ${BKASH_APP_KEY:}
+      app-secret: ${BKASH_APP_SECRET:}
+      username: ${BKASH_USERNAME:}
+      password: ${BKASH_PASSWORD:}
   contact:
     admin-email: ${CONTACT_ADMIN_EMAIL:}
   checkout:

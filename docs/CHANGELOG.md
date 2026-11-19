@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-11-19 — Deployment preparation and quality gate
+- Added official-contract SSLCommerz and bKash sandbox gateway adapters.
+- Added SSLCommerz/bKash sandbox environment configuration placeholders.
+- Resolved the final customer-order test merge brace conflict and retained the latest implementation.
 - Added `test` scripts for both Next.js applications, combining static verification, typecheck, lint and production build.
 - Customer and Admin npm test gates pass with zero npm audit vulnerabilities.
 - Spring Boot backend package compiles successfully with `mvn -DskipTests package`.

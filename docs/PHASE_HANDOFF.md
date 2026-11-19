@@ -14,6 +14,8 @@
 - TiDB migrations: not yet verified through the live staging connection
 - Vercel: dashboard access exists, but Customer/Admin project deployment is not complete
 - Live integrations: provider credentials and live/sandbox acceptance remain pending
+- Payment adapters: SSLCommerz and bKash sandbox implementations added and backend test-compile passes.
+- Nagad: excluded explicitly by owner scope decision.
 
 ## Current checkpoint
 - Phases 0–4: Complete as recorded in `docs/PROJECT_STATUS.md`.

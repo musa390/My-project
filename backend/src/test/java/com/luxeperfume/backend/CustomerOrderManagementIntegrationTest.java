@@ -240,4 +240,3 @@ class CustomerOrderManagementIntegrationTest {
 
     private record Session(Cookie access, long userId) {}
 }
-}
